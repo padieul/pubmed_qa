@@ -57,7 +57,7 @@ services:
       timeout: 5s
       retries: 120
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
 
   es01: # service name (also used as host name)
@@ -111,7 +111,7 @@ services:
       timeout: 10s
       retries: 120
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
   elasticvue: # service name (also used as host name)
     container_name: elasticvue
@@ -121,7 +121,7 @@ services:
       - 8080:8080 # make port 8080 accessible for the host
     depends_on: ["es01"]
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
   kibana:
     container_name: kibana
@@ -141,7 +141,7 @@ services:
       - certs:/usr/share/kibana/config/certs
       - kibanadata:/usr/share/kibana/data
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
     mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
@@ -171,7 +171,7 @@ services:
       - ./models/data:/code/data
       - ./models/saved_models:/code/saved_models
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
   frontend:
     container_name: frontend
@@ -185,7 +185,7 @@ services:
       - 5000:5000
     depends_on: ["middleware"]
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
   models:
     container_name: models
@@ -194,7 +194,7 @@ services:
       dockerfile: Dockerfile
     image: models 
     networks:
-      - ytScannerNetwork
+      - pubmedQANetwork
 
 
 
@@ -207,7 +207,7 @@ volumes:
     driver: local
 
 networks:
-  ytScannerNetwork:
+  pubmedQANetwork:
     driver: bridge
 
 
