@@ -60,6 +60,100 @@ services:
       - ytScannerNetwork
 
 
+  es01: # service name (also used as host name)
+    container_name: es01
+    depends_on:
+      setup:
+        condition: service_healthy
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    env_file:
+      - .env
+    environment: # (see https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docker.html)
+      - discovery.type=single-node # single-node cluster
+      - node.name=es01
+      - cluster.name=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false # enable security/basic authentication
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es01/es01.key
+      - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es01/es01.key
+      - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${LICENSE}
+
+      # required for the elasticvue UI (see https://elasticvue.com/usage)
+      - http.cors.enabled=true
+      - http.cors.allow-origin=http://localhost:8080
+      - http.cors.allow-headers=X-Requested-With,Content-Type,Content-Length,Authorization
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock: # disables swapping (see https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docker.html)
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data # persist elasticsearch data
+      - certs:/usr/share/elasticsearch/config/certs
+    ports:
+      - 9200:9200 # make port 9200 accessible for the host
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    networks:
+      - ytScannerNetwork
+
+  elasticvue: # service name (also used as host name)
+    container_name: elasticvue
+    # to use it, port 9200 of es01 must be published
+    image: cars10/elasticvue:0.42.1
+    ports:
+      - 8080:8080 # make port 8080 accessible for the host
+    depends_on: ["es01"]
+    networks:
+      - ytScannerNetwork
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    ports:
+      - ${KIBANA_PORT}:${KIBANA_PORT}
+    depends_on: 
+      - es01
+        # condition: service_healthy
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+    volumes:
+      - certs:/usr/share/kibana/config/certs
+      - kibanadata:/usr/share/kibana/data
+    networks:
+      - ytScannerNetwork
+    mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+
   middleware:
     container_name: middleware
     build: # instead of an image, build the service from a dockerfile
