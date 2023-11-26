@@ -66,7 +66,7 @@ fetch = PubMedFetcher()
 
 # Define your query and the number of articles you want to retrieve
 query = "intelligence"
-num_of_articles = 30 #177505  # You can adjust this number as needed
+num_of_articles = 5 #177505  # You can adjust this number as needed
 
 # Get the PMIDs for the articles matching the query and date range
 pmids = fetch.pmids_for_query(query, retmax=num_of_articles, datetype='pdat', mindate='2013', maxdate='2023')
@@ -86,6 +86,7 @@ for pmid in tqdm(pmids):
     authors[pmid] = article.authors
     years[pmid] = article.year
     journals[pmid] = article.journal
+    # more metadaa can be added as needed
 
 # Create DataFrames from the dictionaries
 Title = pd.DataFrame(list(titles.items()), columns=['pmid', 'Title'])

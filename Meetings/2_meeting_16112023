@@ -1,0 +1,8 @@
+###  2. Meeting (16.11.2023) Notes:
+
+- Configured ES and Kibana containers
+- uploaded the pubmed_intelligence_articles.csv to ES and investigated the data using Kibana
+- Discussed the following materials:
+    - https://research.ibm.com/blog/retrieval-augmented-generation-RAG 
+    - https://arxiv.org/abs/2005.11401v4 (original RAG paper)
+

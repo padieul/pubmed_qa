@@ -1,0 +1,8 @@
+###  3. Meeting (26.11.2023) Notes:
+
+- Discussed overall goals and assigned tasks(plan.md)
+- Investigated pubmed article metadata, decided to extract entire dataset and only later make a final decision
+about which data fields to include
+- Discussed the following tutorials: 
+    - https://txt.cohere.com/rag-chatbot/
+    - https://github.com/ksmin23/rag-with-amazon-opensearch

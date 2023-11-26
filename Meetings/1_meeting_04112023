@@ -1,0 +1,6 @@
+###  1. Meeting (04.11.2023) Notes:
+
+- Started with configuring ES and Kibana containers
+- Investigated different Pubmed APIs
+- created the retrieve_pubmed_data.py script
+- Retrieved a small data sample (pubmed_intelligence_articles.csv) with minimal selection of metadata fields
