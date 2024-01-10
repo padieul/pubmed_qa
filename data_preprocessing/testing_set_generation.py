@@ -1,6 +1,8 @@
 import pandas
 import re, csv
 from openai import OpenAI
+import ast
+import time
 
 df = pandas.read_csv("data/data_embeddings.csv", usecols=['pmid', 'abstract'])
 
@@ -10,55 +12,77 @@ already_processed_documents_pmid = set(df_already_processed_documents_pmid['PMID
 # print(already_processed_documents_pmid)
 
 client = OpenAI(
-    api_key = "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"
+    api_key = "# TO BE INSERTED HERE"
 )
 
 
 count = 0
 seen_documents_pmid = set()
+question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", "Complex"] # 6 types
+prompts = ["You to generate a Yes/No question that require an understanding of a given context and deciding a \
+boolean value for an answer, e.g., 'Is Paris the capital of France?'. ",
+            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. \
+An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
+            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the \
+capital of France throughout its history?'. ",
+            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and \
+elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” \
+Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
+            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario \
+and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
+"Complex Questions: PROMPT TO BE DETERMINED"
+]
+
+# print(prompts)
 for i in range(df.shape[0]):
-    if count == 1:
+    if count == 10:
         break
     pmid, abstract = df.iloc[i, ]
     if pmid not in seen_documents_pmid and pmid not in already_processed_documents_pmid:
-        seen_documents_pmid.add(pmid) # multiple columns contain the same abstract due to chunking
-        prompt = "You generate questions such as multiple-choice questions, true/false questions, with the choices \
-included in the question from the given abstract as well as their answers. For each question generate a python list of 3 elements \
-like [], first element, type of question as string that is either 'T/F' or 'MC', the second element that is a string of question \
-with the possible choices included, third is the  answer as a string that can be 'T', 'F', 'a', 'b','c', etc. \
-The abstract is: " + abstract + "Remember and be careful: each of the entries in the lists should be a string with quotation marks!!"
-        #  + "You just give a python list of lists of size 3 with the mentioned entities for each abstract at the end. That is like [[.., .., ..,], [.., .., ..,], ..]"
-        # print(prompt)
-        if prompt:
-            chat_completion = client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                model="gpt-3.5-turbo-1106"
-            )
-        reply = chat_completion.choices[0].message.content
-        print(reply)
+        for i in range(5):
+            time.sleep(30)
+            seen_documents_pmid.add(pmid) # multiple columns contain the same abstract due to chunking
+            question_type = question_types[i]
+            prompt = prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. \
+The abstract is: " + abstract + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+DO NOT HALLUSINATE!!!"
+            # print(question_type)
+            # print(prompt)
+            if prompt:
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    model="gpt-3.5-turbo-1106"
+                )
+            reply = chat_completion.choices[0].message.content
+            if reply.lower == "na":
+                continue
+            # print(reply)
+            try:
+                # Check if ChatGPT gave the response in a correct format
+                result_list = ast.literal_eval(reply)
+                if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
+                    # everything is good, we can add this to our dataset
+                    test_set_file_path = 'data/test_dataset.csv'
 
-        lists = re.findall(r'\[.*?\]', reply) # find the list
+                    with open(test_set_file_path, 'a', newline='') as file:
+                        csv_writer = csv.writer(file, delimiter='\t')
 
-        if not lists: # did not reply in the correct form
-            print("Warning: No lists found in the input string.")
-            break
-        # Convert strings to lists
-        resulting_lists = [eval(lst) for lst in lists]
-
-        # adding the questions to the testing set
-
-        test_set_file_path = 'data/test_dataset.csv'
-
-        with open(test_set_file_path, 'a', newline='') as file:
-            csv_writer = csv.writer(file, delimiter='\t')
-            for lst in resulting_lists:
-                lst[1] = lst[1].replace('\n', ' ').replace('\t', ' ') # new lines and tabs in question choices arise issues
-
-                new_record = [pmid, abstract] + lst 
-                csv_writer.writerow(new_record)
+                        new_record = [pmid, abstract, question_type] + result_list
+                        csv_writer.writerow(new_record)
+                else:
+                    print("WARNING: NOT CORRECTLY GENERATED")
+                    # print(reply)
+                    continue
+            except (SyntaxError, ValueError):
+                print("WARNING: A LIST IS NOT GENERATED!")
+                print(reply)
+                continue
+            # print(reply)
         count += 1
