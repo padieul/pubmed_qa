@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-image: url('C:/Users/sushm/OneDrive/Desktop/Sem1/NLP/medicine.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  #chat-container {
+    background-color: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  #chat-messages {
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  #user-input-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  #user-input {
+    width: 70%;
+    padding: 8px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+  }
+  
+  #send-button {
+    width: 30%;
+    padding: 8px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+  
