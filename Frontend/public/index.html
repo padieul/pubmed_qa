@@ -4,8 +4,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chatbot Frontend</title>
-  <link rel="stylesheet" href="C:/Users/sushm/OneDrive/Desktop/Sem1/NLP/public/style.css">
+  <title>Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('file:///padieul/pubmed_qa/Frontend/medicine.jpg'); /* Replace with the correct path to your image file */
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      cursor: url('file:///padieul/pubmed_qa/Frontend/stethoscope.png'), auto; /* Replace with the correct path to your stethoscope icon file */
+    }
+
+    #chat-container {
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      overflow: hidden;
+      width: 300px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+
+    #chat-messages {
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    #user-input-container {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 8px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #send-button {
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <div id="chat-container">
@@ -16,6 +65,28 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    function sendMessage() {
+      const userMessage = document.getElementById('user-input').value;
+      appendMessage('You', userMessage);
+
+      // TODO: Add logic to send the message to the backend and get the bot's response
+
+      // Clear the user input
+      document.getElementById('user-input').value = '';
+    }
+
+    function appendMessage(sender, message) {
+      const chatMessages = document.getElementById('chat-messages');
+      const messageElement = document.createElement('div');
+      const senderClass = sender === 'You' ? 'user-message' : 'bot-message';
+      messageElement.className = senderClass;
+      messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+      chatMessages.appendChild(messageElement);
+
+      // Scroll to the bottom of the chat container
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  </script>
 </body>
 </html>
