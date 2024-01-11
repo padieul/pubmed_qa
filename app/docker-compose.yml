@@ -17,6 +17,8 @@ services:
       nofile:
         soft: 65536
         hard: 65536
+    volumes:
+      - esdata:/usr/share/elasticsearch/data # persist elasticsearch data
 
   kibana:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
@@ -34,3 +36,7 @@ services:
 
 networks:
   elastic:
+
+volumes:
+  esdata:
+    driver: local
