@@ -1,0 +1,60 @@
+/* styles.css */
+
+@keyframes blink {
+  0% {opacity: 1;}
+  50% {opacity: 0.5;}
+  100% {opacity: 1;}
+}
+
+#load-button[disabled] {
+  animation: blink 1s linear infinite;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-image: url('images/medicine.jpg');
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    cursor: url('images/stethoscope.png') 100 100, auto;
+  }
+  
+  #chat-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  #chat-messages {
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  #user-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+  }
+  
+  #user-input {
+    flex: 1;
+    padding: 8px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 5px;
+  }
+  
+  #send-button {
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
