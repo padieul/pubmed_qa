@@ -65,7 +65,7 @@ def dataframe_to_bulk_actions(df):
 
 
 # Read the data and the embeddings from CSV file
-df_pubmed = pd.read_csv('c:\\Code\\Project\\data\\data_embeddings.csv')
+df_pubmed = pd.read_csv('C:\\Users\\prdie\\OneDrive\\Sources\\pubmed_qa\\pubmed_qa\\data_preprocessing\\data\\data_embeddings.csv')
 
 
 # Load data in batches to Elasticsearch

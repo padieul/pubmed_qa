@@ -8,9 +8,11 @@
   <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
-  <script src="functionality.js"></script>
+  
   <div id="main-container" style="display: flex; flex-direction: column; align-items: center;">
-    <button id="load-button">Setup records storage</button>
+    <div id="storage-info-container">
+      <p id="storage-info">Storage information goes here</p>
+    </div>
     <div id="chat-container">
       <div id="chat-messages"></div>
       <div id="user-input-container">
@@ -19,5 +21,7 @@
       </div>
     </div>
   </div>
+
+  <script src="functionality.js"></script>
 </body>
 </html>

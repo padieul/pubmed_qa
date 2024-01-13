@@ -7,6 +7,9 @@ document.getElementById('user-input').addEventListener('keydown', function (even
     }
 });
 
+// Call the function when the page loads
+fetchStorageInfo();
+
 async function sendMessage() {
     const userMessage = document.getElementById('user-input').value;
     appendMessage('You', userMessage);
@@ -28,7 +31,7 @@ async function sendMessage() {
 
 async function sendToBackend(message) {
     // Using fetch API to send a GET request to the FastAPI endpoint
-    const response = await fetch(`http://localhost:8000/read_root?message=${encodeURIComponent(message)}`);
+    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?message=${encodeURIComponent(message)}`);
 
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -49,29 +52,23 @@ function appendMessage(sender, message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-document.getElementById('load-button').addEventListener('click', async function() {
-    this.disabled = true; // disable the button to prevent multiple clicks
-    this.style.backgroundColor = 'yellow'; // change the button color to yellow
-    this.textContent = 'Loading...'; // change the button text to 'Loading...'
-  
+// main.js
+async function fetchStorageInfo() {
     try {
-      const response = await fetch('http://localhost:8000/load_data'); // replace with your actual API endpoint
+      const response = await fetch('http://localhost:8000/storage_info'); // replace with your actual API endpoint
   
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
   
       const data = await response.json();
+      const storageInfo = data.info; // replace with your actual data property
   
-      if (data.success) { // replace with your actual success condition
-        this.style.backgroundColor = 'green'; // change the button color to green
-        this.textContent = 'Data Loaded'; // change the button text to 'Data Loaded'
-      } else {
-        throw new Error('Data loading failed');
-      }
+      document.getElementById('storage-info').textContent = storageInfo;
     } catch (error) {
-      console.error('Error loading data:', error);
-      this.style.backgroundColor = 'red'; // change the button color to red
-      this.textContent = 'Error'; // change the button text to 'Error'
+      console.error('Error fetching storage info:', error);
+      document.getElementById('storage-info').textContent = 'Error fetching storage info';
     }
-  });
+  }
+  
+  
