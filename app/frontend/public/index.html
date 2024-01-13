@@ -66,14 +66,34 @@
   </div>
 
   <script>
-    function sendMessage() {
+    async function sendMessage() {
       const userMessage = document.getElementById('user-input').value;
       appendMessage('You', userMessage);
 
-      // TODO: Add logic to send the message to the backend and get the bot's response
+      try {
+        // TODO: Add logic to send the message to the backend and get the bot's response
+        const response = await sendToBackend(userMessage);
+        const botResponse = response.message;
+
+        // Display the bot's response
+        appendMessage('Bot', botResponse);
+      } catch (error) {
+        console.error('Error sending message to backend:', error);
+      }
 
       // Clear the user input
       document.getElementById('user-input').value = '';
+    }
+
+    async function sendToBackend(message) {
+      // Using fetch API to send a GET request to the FastAPI endpoint
+      const response = await fetch(`http://localhost:8000/read_root?message=${encodeURIComponent(message)}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      return await response.json();
     }
 
     function appendMessage(sender, message) {

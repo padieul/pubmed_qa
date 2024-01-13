@@ -1,0 +1,5 @@
+###  5. Meeting (06.01.2023) Notes:
+
+- General project discussion
+- Discussing built-in retrieval mechanisms in Elasticsearch: dense vectors and BM25
+- Challenges in creating question-answer pair datasets. What are optimal prompts? One prompt per question type or a single prompt for all six types of questions?
