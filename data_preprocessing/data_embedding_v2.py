@@ -10,7 +10,7 @@ import os, sys
 
 def embed_data(source_file: str=None, destination_file: str=None, start_index: int=0, end_index: int=0) -> None:
     '''
-    A helper function to chunk the data retrieved from PubMed
+    A helper function to embed the chunked data retrieved from PubMed
 
     Parameters:
         source_file (str): the location of the source csv file 
@@ -64,4 +64,4 @@ if __name__ == "__main__":
     destination_file = os.path.join(sys.path[0], "data\\data_embeddings_500_250.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_500_250.csv")
 
     
-    embed_data(source_file=source_file, destination_file=destination_file, start_index=0, end_index=1000)
+    embed_data(source_file=source_file, destination_file=destination_file, start_index=1001, end_index=2000)
