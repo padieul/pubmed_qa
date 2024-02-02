@@ -26,7 +26,7 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
     df_data = pd.read_csv(source_file)
 
     # Initialize langChain splitter to split abstracts
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=["\n\n", "\n", " ", ""])
 
     rows_list = []
 
@@ -57,8 +57,8 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
 
 if __name__ == "__main__":
 
-    chunk_size = 500
-    chunk_overlap = 250
+    chunk_size = 800
+    chunk_overlap = 100
        
     source_file = os.path.join(sys.path[0], "data\\exported_data.csv")
     destination_folder = os.path.join(sys.path[0], "data\\")
@@ -69,4 +69,4 @@ if __name__ == "__main__":
         destination_folder = os.path.join(sys.path[0], "data/")
 
     
-    chunk_data(source_file=source_file, chunk_size=500, chunk_overlap=250, destination_folder=destination_folder)
+    chunk_data(source_file=source_file, chunk_size=chunk_size, chunk_overlap=chunk_overlap, destination_folder=destination_folder)

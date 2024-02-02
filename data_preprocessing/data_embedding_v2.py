@@ -60,8 +60,8 @@ def embed_data(source_file: str=None, destination_file: str=None, start_index: i
 
 if __name__ == "__main__":
 
-    source_file = os.path.join(sys.path[0], "data\\data_chunks_500_250.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_chunks_500_250.csv")
-    destination_file = os.path.join(sys.path[0], "data\\data_embeddings_500_250.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_500_250.csv")
+    source_file = os.path.join(sys.path[0], "data\\data_chunks_800_100.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_chunks_800_100.csv")
+    destination_file = os.path.join(sys.path[0], "data\\data_embeddings_800_100.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_800_100.csv")
 
     
-    embed_data(source_file=source_file, destination_file=destination_file, start_index=1001, end_index=2000)
+    embed_data(source_file=source_file, destination_file=destination_file, start_index=2000, end_index=3000)
