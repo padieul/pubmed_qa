@@ -1,0 +1,20 @@
+###  6. Meeting (02.02.2024) Notes:
+
+- experimentation with different embeddings models and size
+
+- connect frontend to backend to demonstrate retrieval of relevant results for a given query 2h
+- connect retrieval with a lm (llama2) 1h 
+- test with open search - change scripts accordingly
+
+- using langchain to filter query results based on metada
+- extract only relevant information using langchain (contextual compression)
+- also add references to abstract by providing pubmed page urls
+- do testing using chat-gpt generated test data sets and implement different testing metrics
+
+- project report (readme.md)
+    - how to run?
+    - architecture: description and schematics
+
+
+- optional: chat history
+

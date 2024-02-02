@@ -31,7 +31,7 @@ async function sendMessage() {
 
 async function sendToBackend(message) {
     // Using fetch API to send a GET request to the FastAPI endpoint
-    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?message=${encodeURIComponent(message)}`);
+    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent(message)}`);
 
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
