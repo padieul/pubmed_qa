@@ -17,3 +17,8 @@
 - simple demonstration of fine-tuning
 
 
+### Evaluation Metrics (Sushmitha and Mahammad)
+- BLEU (Sushmitha)
+- ROUGE (Mahammad)
+- BERTScore (Sushmitha)
+- MoverScoere (Mahammad)
