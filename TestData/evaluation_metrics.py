@@ -1,20 +1,21 @@
 import evaluate
+
+#Sample predictions and references
+predictions = ["Hello, how are you?", "This is a test sentence.", "BERTScore is awesome!"]
+references = ["Hello, how are you?", "This is a test sentence.", "BERTScore is amazing!"]
+references_bleu = [["Hello, how are you?"], ["This is a test sentence."], ["BERTScore is amazing!"]]
+
+
 bleu = evaluate.load("bleu")
 bertscore = evaluate.load("bertscore")
-#Sample Reference and Candidate 
-references = [["Hello, how are you?", "This is a test sentence.", "BERTScore is awesome!"]]
-candidates = [["Hello, how are you?", "This is a test sentence.", "BERTScore is amazing!"]]
+rouge = evaluate.load("rouge")
 
-# Add batch to BLEU metric
-bleu.add_batch(predictions=candidates, references=references)
 
-# Compute BLEU score
-bleu_score = bleu.compute()
-print("BLEU Score:", bleu_score)
+bleu_results = bleu.compute(predictions=predictions, references=references_bleu)
+print("BLEU Score:", bleu_results)
 
-# Add batch to BERTScore metric
-bertscore.add_batch(predictions=candidates, references=references)
-
-# Compute BERTScore
-bertscore_results = bertscore.compute()
+bertscore_results = bertscore.compute(predictions=predictions, references=references, lang="en")
 print("BERTScore Results:", bertscore_results)
+
+rouge_results = rouge.compute(predictions=predictions, references=references)
+print("ROUGE Results:", rouge_results)
