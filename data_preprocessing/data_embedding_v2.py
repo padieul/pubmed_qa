@@ -46,10 +46,10 @@ def embed_data(source_file: str=None, destination_file: str=None, start_index: i
 
         embedding = embedding[0].tolist()
 
-        rows_list.append([row['pmid'], row['title'], row['abstract'], row['chunk_id'], row['chunk'], embedding, row['key_words'], row['authors'], row['journal'], row['year'], row['month'], row['source'], row['country']])
+        rows_list.append([row['pmid'], row['title'], row['chunk_id'], row['chunk'], embedding, row['key_words'], row['authors'], row['journal'], row['year'], row['month'], row['source'], row['country']])
 
 
-    df_save = pd.DataFrame(rows_list, columns=["pmid", "title", "abstract", "chunk_id", "chunk", "embedding", "key_words", "authors", "journal", "year", "month", "source", "country"])
+    df_save = pd.DataFrame(rows_list, columns=["pmid", "title", "chunk_id", "chunk", "embedding", "key_words", "authors", "journal", "year", "month", "source", "country"])
     
 
     if os.path.exists(destination_file):
