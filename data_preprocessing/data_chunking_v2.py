@@ -37,10 +37,10 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
 
         for i in range(len(chunks)):
 
-            rows_list.append([row['PMID'], row['Title'], i, chunks[i], row['Key_words'], row['Authors'], row['Journal'], row['Year'], row['Month'], row['Source'], row['Country']])
+            rows_list.append([row['PMID'], row['Title'], row['Abstract'], i, chunks[i], row['Key_words'], row['Authors'], row['Journal'], row['Year'], row['Month'], row['Source'], row['Country']])
 
 
-    df_data_chunks = pd.DataFrame(rows_list, columns=["pmid", "title", "chunk_id", "chunk", "key_words", "authors", "journal", "year", "month", "source", "country"])
+    df_data_chunks = pd.DataFrame(rows_list, columns=["pmid", "title", "abstract", "chunk_id", "chunk", "key_words", "authors", "journal", "year", "month", "source", "country"])
 
     # Save the chunked data in a CSV file (We save the data in chunks so we can show the progress in tqdm)
     splits = np.array_split(df_data_chunks.index, 100)
@@ -57,7 +57,7 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
 
 if __name__ == "__main__":
 
-    chunk_size = 1100
+    chunk_size = 800
     chunk_overlap = 100
        
     source_file = os.path.join(sys.path[0], "data\\exported_data.csv")
