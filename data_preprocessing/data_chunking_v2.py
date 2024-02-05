@@ -57,7 +57,7 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
 
 if __name__ == "__main__":
 
-    chunk_size = 800
+    chunk_size = 500
     chunk_overlap = 100
        
     source_file = os.path.join(sys.path[0], "data\\exported_data.csv")

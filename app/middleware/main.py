@@ -1,17 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from elasticsearch import Elasticsearch, helpers, exceptions
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer('all-mpnet-base-v2')
+from utils import pretty_response, os_client
 
 
-es_container_name = "elasticsearch"
-client = Elasticsearch(
-    # use es container name as host and port 9200
-    "http://" + es_container_name + ":9200"  
-)
+from angle_emb import AnglE, Prompts
 
+# Initialize AnglE embedding model
+angle = AnglE.from_pretrained("WhereIsAI/UAE-Large-V1", pooling_strategy="cls").cuda()
+
+# Enable Prompt.C for retrieval optimized embeddings
+angle.set_prompt(prompt=Prompts.C)
+
+# Initialize OpenSearch instance
+client = os_client()
+
+# Initialize FastAPI instance
 app = FastAPI()
 
 # Allow all origins during development
@@ -26,26 +29,14 @@ app.add_middleware(
 )
 
 
-#http://localhost:8000/storage_info
+# http://localhost:8000/storage_info
 
-def pretty_response(response):
-    temp_dict = {}
-    order_key = 0
-    for hit in response:
-        id = hit['_id']
-        score = hit['_score']
-        pmid = hit['_source']['pmid']
-        chunk_id = hit['_source']['chunk_id']  
-        chunk = hit['_source']['chunk']      
-        pretty_output = (f"\nID: {id}\nPMID: {pmid}\nChunk ID: {chunk_id}\nText: {chunk}")
-        temp_dict[order_key] = pretty_output
-        order_key += 1
-    return temp_dict
 
 @app.get("/read_root")
 def read_root(message: str):
     response_message = f"FastAPI detected, that you said: {message}"
     return {"message": response_message}
+
 
 """
 # Send a knn query to Elasticsearch
@@ -65,21 +56,26 @@ response = client.search(
 @app.get("/retrieve_documents_dense")
 def retrieve_documents(query_str: str):
     print("Query str: ", query_str)
-    query_vector = model.encode(query_str).tolist()
+    query_vector = angle.encode({"text": query_str}).tolist()[0]
 
-
-    knn_dict={
-      "field": "embedding",
-      "query_vector":  query_vector,
-      "k": 10,
-      "num_candidates": 100
+    # Defining the knn query parameters
+    search_query_desne = {    
+        "query": {
+            "knn": {
+                "embedding": {
+                    "vector": query_vector,
+                    "k": 10
+                }
+            }
+        }
     }
+
+    response_message = client.search(index="pubmed_500_200", body=search_query_desne)
     
-    response_message = client.search(index="pubmed_index", knn=knn_dict)
-    responses_dict = pretty_response(response_message['hits']['hits'])
+    responses_dict = pretty_response(response_message["hits"]["hits"])
 
     response_str = ""
-    for key,val in responses_dict.items():
+    for key, val in responses_dict.items():
         response_str += str(key) + ": " + str(val) + "\n"
     return {"message": response_str}
 

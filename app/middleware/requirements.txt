@@ -1,6 +1,8 @@
 fastapi
 uvicorn
-elasticsearch
-sentence-transformers
-huggingface-hub
-
+opensearch-py
+angle-emb
+langchain
+# huggingface-hub
+# elasticsearch
+# sentence-transformers
