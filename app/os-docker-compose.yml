@@ -45,6 +45,8 @@ services:
       - opensearch  
     networks:
       - opensearch-net
+    volumes:
+      - middleware-data:/root/.cache/pip
 
   frontend:
     build:
@@ -60,6 +62,7 @@ services:
 
 volumes:
   opensearch-data:
+  middleware-data:
 
 networks:
   opensearch-net:

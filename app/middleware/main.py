@@ -59,19 +59,12 @@ def retrieve_documents(query_str: str):
     query_vector = angle.encode({"text": query_str}).tolist()[0]
 
     # Defining the knn query parameters
-    search_query_desne = {    
-        "query": {
-            "knn": {
-                "embedding": {
-                    "vector": query_vector,
-                    "k": 10
-                }
-            }
-        }
+    search_query_desne = {
+        "query": {"knn": {"embedding": {"vector": query_vector, "k": 10}}}
     }
 
     response_message = client.search(index="pubmed_500_200", body=search_query_desne)
-    
+
     responses_dict = pretty_response(response_message["hits"]["hits"])
 
     response_str = ""
