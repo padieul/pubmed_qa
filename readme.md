@@ -30,7 +30,16 @@ Reference text = "Students enjoy doing homeworks"
 
 
 - BLEU (Bilingual Evaluation Understudy)
-    BLEU compares n-grams of the generated text to the n-grams of the reference text. 
+    BLEU is used to have a single numerical value to a generated text tells how good it is compared to one or more reference texts. BLEU compares n-grams of the generated text to the n-grams of the reference text.
     
+    Let's start with uniqrams which correponds to individual words in a text. Again we see that 4 of the words in the generated text appear in the reference text. That are "Students", "enjoy", "doing", "homeworks". 
+    The precision or the Unigram Precision is number of matching words / number of words in the generated text. In this case, that is 4/5. The higher precision means a better generation of text. 
+    However, a problem that may arise is that repetitive patterns may occur, meaning a word can occur several times resulting in high precision. However, this does not mean that the generated text is good. As an example, if the model generates "homework homework homework homework" the precision gets a perfect score of 1, even the generated text is terribly bad. 
+    To handle this issue, BLEU uses a modified precision that clips the number of times to count a specific word based on the number of times it appears in the reference text. In our example, "homework" appears only once in the reference text. So, BLEU clips the number of word mathces to 1 and give the modified unigram precision that is 1/4 (that is much lower than the previous precision as it should be). 
+    Another problem is that unigram precision does not pay attention to the order of words. Imagine we have a generated text that is "doing NLP Students homeworks enjoy". In this case, we again get a high score of 4/5 which is not something expected.
+    To handle this issue, BLEU actually computes the precision (modified precision) for several n-grams not just unigrams and then reports the results.
+    If we calculate the trigram (3-gram) precision for our generated text of "doing NLP Students homeworks enjoy", we get a precision of 0/5 which is something expected. That is because no 3 chunks of words appear in the reference text that we have. So, here the order is considered.
+
+    BLEU calculates unigram, bigram, trigram, 4-gram precision scores and reports individual precision scores and a BLEU Score that is the geometric mean of all four n-gram precisions. BLEU Score is easy to compute and popular but it does not consider meaning and incorporate sentence structure. 
 
 - BERTScore
