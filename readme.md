@@ -43,3 +43,42 @@ Reference text = "Students enjoy doing homeworks"
     BLEU calculates unigram, bigram, trigram, 4-gram precision scores and reports individual precision scores and a BLEU Score that is the geometric mean of all four n-gram precisions. BLEU Score is easy to compute and popular but it does not consider meaning and incorporate sentence structure. 
 
 - BERTScore
+
+
+### Test Dataset Generation
+    Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts.
+    1) Yes/No Questions: these are the questions that essentially require a yes or no answer e.g., “Is Paris the capital of France?”.
+    2) Factoid-type Questions [what, which, when, who, how]: These questions usually begin with a “wh”-word. An answer to these questions is commonly short and formulated as a single sentence. In some cases, contents of documents already answers the question, e.g., “What is the capital of France?”, where a sentence from Wikipedia answers the question.
+    3) List-type Questions: The answer to this type of questions is a list of items, e.g.,“Which cities have served as the capital of France throughout its history?”. If the exact list of items are already found in documents, answer generation is not necessary. 
+    4) Causal Questions [why or how]: Causal questions usually require reasons, explanations, and elaborations on particular objects or events in the answers, e.g., “Why did Paris become the capital of France?”
+    5) Hypothetical Questions: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., “What would happen if Paris airport closes for a day?”. It is usually hard to get a good accuracy on answering to these questions. In our setting, the answer is usually expected not to be reliable as it is a medical domain.
+    6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
+
+    Question Generation Process:
+    We use the available abstacts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract. One of 5 prompts for each question type is used along with a given abstract to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
+    Here is our prompt: 
+
+    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + abstract + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
+    
+    In this scenario, prompts[i] is a prompt specific to the question type. Those prompts can be found below:
+
+    prompts = [
+            "You to generate a Yes/No question that require an understanding of a given context and deciding a boolean value for an  answer, e.g., 'Is Paris the capital of France?'. ",
+            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
+            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the capital of France throughout its history?'. ",
+            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
+            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
+            "Complex Questions: PROMPT TO BE DETERMINED"
+    ]
+
+    By having a prompt for each question type, we know for sure that which type of question is generated. This is also beneficial in terms of making a prompt as specific as possible. 
+
+    With our prompt, we also consider the case of forcing model to generate a question type that is not necessarily good if generated from a particular abstract. So, we include the case of not generating a question type if it is not suitable from the given abstract. 
+
+    Another aspect that we consider is the format of returned answer from the model, we repetatively mention the format in the prompt. However, we expect the model occassionally return the answer in a different format. That is why we check the format of returned result - checking if the whole answer is a list a of strings. We additionally keep the logs of generated questions that are in a incorrect format. We believe this can give additional insights to improve our implementation of question generations.
+
+    We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
+
+    We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
+
+    [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
