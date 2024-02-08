@@ -83,6 +83,10 @@ def upload_data(source_file: str=None, index_name: str=None) -> None:
                         "name": "hnsw",
                         "engine": "lucene"
                     }                
+                },
+                "vector_field": {
+                    "type": "alias",
+                    "path" : "embedding"
                 }
             }
         }

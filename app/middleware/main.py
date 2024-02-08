@@ -1,18 +1,31 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils import pretty_response, os_client
+from utils import llm_model, opensearch_vector_store
+from config import set_api_keys
+from models import AnglEModel
+from langchain.chains import RetrievalQA
 
 
-from angle_emb import AnglE, Prompts
+
+# Setup all API tokens
+set_api_keys()
 
 # Initialize AnglE embedding model
-angle = AnglE.from_pretrained("WhereIsAI/UAE-Large-V1", pooling_strategy="cls").cuda()
+embeddings = AnglEModel()
 
-# Enable Prompt.C for retrieval optimized embeddings
-angle.set_prompt(prompt=Prompts.C)
+# Initialize LLM model
+llm = llm_model()
 
-# Initialize OpenSearch instance
-client = os_client()
+# Initialize OpenSearch vector and store and retriever
+vector_store = opensearch_vector_store(index_name="pubmed_500_100")
+retriever=vector_store.as_retriever(search_kwargs={"k": 5})
+
+# Initialize langChain RAG pipeline
+rag_pipeline = RetrievalQA.from_chain_type(llm=llm,
+                                           chain_type="stuff",
+                                           retriever=retriever,
+                                           verbose=True)
+
 
 # Initialize FastAPI instance
 app = FastAPI()
@@ -29,48 +42,19 @@ app.add_middleware(
 )
 
 
-# http://localhost:8000/storage_info
-
-
 @app.get("/read_root")
 def read_root(message: str):
     response_message = f"FastAPI detected, that you said: {message}"
     return {"message": response_message}
 
 
-"""
-# Send a knn query to Elasticsearch
-response = client.search(
-  index = "pubmed_index",
-  knn={
-      "field": "embedding",
-      "query_vector":  query_emb.tolist(),
-      "k": 10,
-      "num_candidates": 100
-    }
-)
-
-"""
-
-
 @app.get("/retrieve_documents_dense")
 def retrieve_documents(query_str: str):
-    print("Query str: ", query_str)
-    query_vector = angle.encode({"text": query_str}).tolist()[0]
-
-    # Defining the knn query parameters
-    search_query_desne = {
-        "query": {"knn": {"embedding": {"vector": query_vector, "k": 10}}}
-    }
-
-    response_message = client.search(index="pubmed_500_200", body=search_query_desne)
-
-    responses_dict = pretty_response(response_message["hits"]["hits"])
-
-    response_str = ""
-    for key, val in responses_dict.items():
-        response_str += str(key) + ": " + str(val) + "\n"
-    return {"message": response_str}
+    '''
+    A complete end-to-end RAG to answer user questions
+    '''
+    answer = rag_pipeline(query_str)
+    return {"message": answer['result']}
 
 
 @app.get("/retrieve_documents_sparse")

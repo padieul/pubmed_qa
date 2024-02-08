@@ -1,6 +1,7 @@
 from opensearchpy import OpenSearch
 from models import AnglEModel
 from langchain_community.vectorstores import OpenSearchVectorSearch
+from langchain_community.llms import Replicate
 
 
 def pretty_response(response):
@@ -64,7 +65,7 @@ def opensearch_vector_store(index_name: str = None):
         os_store = OpenSearchVectorSearch(
             embedding_function=AnglEModel(),
             index_name=index_name,
-            opensearch_url="https://localhost:9200",
+            opensearch_url="https://opensearch:9200",
             http_auth=("admin", "admin"),
             use_ssl=False,
             verify_certs=False,
@@ -73,3 +74,15 @@ def opensearch_vector_store(index_name: str = None):
         )
 
     return os_store
+
+
+def llm_model(name: str = "replicate"):
+    """
+    Create a new LLM model for langChain pipeline
+    """
+    if name == "replicate":
+        llm = Replicate(
+            model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+            model_kwargs={"temperature": 0.01, "max_length": 500, "top_p": 1},
+        )
+    return llm
