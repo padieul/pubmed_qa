@@ -1,0 +1,84 @@
+<!-- src/Chatbot.svelte -->
+<script>
+  let messages = [];
+  let userInput = '';
+
+  function sendMessage() {
+    if (userInput.trim() !== '') {
+      messages = [...messages, { sender: 'You', message: userInput }];
+      userInput = '';
+
+      // Placeholder: Add logic to send userInput to the backend for processing
+    }
+  }
+</script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-image: url('images/medicine.jpg');
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+      }
+  
+  #chat-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  #storage-info-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 200px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  #chat-messages {
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  #user-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+  }
+  
+  #user-input {
+    flex: 1;
+    padding: 8px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 5px;
+  }
+  
+  #send-button {
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+</style>
+
+<div>
+  <div>
+    {#each messages as { sender, message }}
+      <div><strong>{sender}:</strong> {message}</div>
+    {/each}
+  </div>
+  <div>
+    <input bind:value={userInput} placeholder="Type a message..." />
+    <button on:click={sendMessage}>Send</button>
+  </div>
+</div>
