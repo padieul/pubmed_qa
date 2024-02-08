@@ -116,8 +116,8 @@ def upload_data(source_file: str=None, index_name: str=None) -> None:
 
 if __name__ == "__main__":
 
-    source_file = os.path.join(sys.path[0], "data\\data_embeddings_500_250.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_500_250.csv")
+    source_file = os.path.join(sys.path[0], "data\\data_embeddings_500_100.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_500_100.csv")
     
-    index_name = "pubmed_500_200"
+    index_name = "pubmed_500_100"
 
     upload_data(source_file=source_file, index_name=index_name)

@@ -2,29 +2,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils import llm_model, opensearch_vector_store
 from config import set_api_keys
-from models import AnglEModel
 from langchain.chains import RetrievalQA
-
 
 
 # Setup all API tokens
 set_api_keys()
-
-# Initialize AnglE embedding model
-embeddings = AnglEModel()
 
 # Initialize LLM model
 llm = llm_model()
 
 # Initialize OpenSearch vector and store and retriever
 vector_store = opensearch_vector_store(index_name="pubmed_500_100")
-retriever=vector_store.as_retriever(search_kwargs={"k": 5})
+retriever = vector_store.as_retriever(search_kwargs={"k": 10})
 
 # Initialize langChain RAG pipeline
-rag_pipeline = RetrievalQA.from_chain_type(llm=llm,
-                                           chain_type="stuff",
-                                           retriever=retriever,
-                                           verbose=True)
+rag_pipeline = RetrievalQA.from_chain_type(
+    llm=llm, chain_type="stuff", retriever=retriever, verbose=True
+)
 
 
 # Initialize FastAPI instance
@@ -50,11 +44,11 @@ def read_root(message: str):
 
 @app.get("/retrieve_documents_dense")
 def retrieve_documents(query_str: str):
-    '''
+    """
     A complete end-to-end RAG to answer user questions
-    '''
+    """
     answer = rag_pipeline(query_str)
-    return {"message": answer['result']}
+    return {"message": answer["result"]}
 
 
 @app.get("/retrieve_documents_sparse")
