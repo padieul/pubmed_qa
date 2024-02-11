@@ -10,14 +10,14 @@ with open("data_preprocessing/test_data/test_dataset.csv", 'w', newline='') as f
     # Create a CSV writer object with tab as the delimiter
     csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
 
-    header = ["pmid1", "pmid2", "pmid3", "chunk_id1", "chunk_id2", "chunk_id3", "abstract", 
+    header = ["pmid", "pmid2", "pmid3", "chunk_id", "chunk_id2", "chunk_id3", "chunk", 
     "question_type", "question", "answer", "keywords_if_complex"]
     csv_writer.writerow(header)
 '''
 
 # Here we store the chunks that we have already processed, in order not to use in the future
-df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid1", "chunk_id1"], sep='\t')
-already_processed_documents= set(df_already_processed_documents['pmid1'] + '_' + df_already_processed_documents['chunk_id1'])
+df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid", "chunk_id"], sep='\t')
+already_processed_documents= set(df_already_processed_documents['pmid'] + '_' + df_already_processed_documents['chunk_id'])
 
 # # print(already_processed_documents)
 
@@ -155,6 +155,7 @@ for i in range(num_of_records):
                         # we have to find only the most similar chunks
                         # because we agreed on finding one similar chunk for 30 of 40 records
                         num_of_similar_chunks = 1
+                        count_for_two_keywords_two_chunks += 1
                     else:
                         num_of_similar_chunks = 2
 
@@ -166,6 +167,7 @@ for i in range(num_of_records):
                         # we have to find only the most similar chunks
                         # because we agreed on finding one similar chunk for 15 of 20 records
                         num_of_similar_chunks = 1
+                        count_for_three_keywords_two_chunks += 1
                     else:
                         num_of_similar_chunks = 2
                 

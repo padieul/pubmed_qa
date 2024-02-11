@@ -1,1 +1,1 @@
-pmid1	pmid2	pmid3	chunk_id1	chunk_id2	chunk_id3	abstract	question_type	question	answer	keywords_if_complex
+pmid	pmid2	pmid3	chunk_id	chunk_id2	chunk_id3	chunk	question_type	question	answer	keywords_if_complex
