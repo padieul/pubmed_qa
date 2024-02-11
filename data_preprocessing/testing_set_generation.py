@@ -4,21 +4,89 @@ from openai import OpenAI
 import ast
 import time
 
-df = pandas.read_csv("data_preprocessing/data/exported_data.csv", usecols=['pmid', 'abstract'])
+# To create the test set csv file - run only once
+'''
+with open("data_preprocessing/test_data/test_dataset.csv", 'w', newline='') as file:
+    # Create a CSV writer object with tab as the delimiter
+    csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
 
-df_already_processed_documents_pmid = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["PMID"], sep='\t')
-already_processed_documents_pmid = set(df_already_processed_documents_pmid['PMID'])
+    header = ["pmid1", "pmid2", "pmid3", "chunk_id1", "chunk_id2", "chunk_id3", "abstract", 
+    "question_type", "question", "answer", "keywords_if_complex"]
+    csv_writer.writerow(header)
+'''
 
-# print(already_processed_documents_pmid)
+# Here we store the chunks that we have already processed, in order not to use in the future
+df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid1", "chunk_id1"], sep='\t')
+already_processed_documents= set(df_already_processed_documents['pmid1'] + '_' + df_already_processed_documents['chunk_id1'])
 
-client = OpenAI(
-    api_key = "# TO BE INSERTED HERE"
-)
+# # print(already_processed_documents)
+
+# Here we are taking sample of size 50 to generate questions
+# ?? from which we can take the keywords for our keyword based similarity search on opensearch
+df_data_embeddings = pandas.read_csv("data_preprocessing/data/data_embeddings_500_100.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
+
+# Here we need to keep the data records with keywords because we need the keywords
+# for our similarity search - to find related documents to generate complex questions
+df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].notna()] # data records with key_words
+
+df_data_embeddings['key_words'] = df_data_embeddings['key_words'].apply(ast.literal_eval) # convert the key_words to list type
+
+# After investigation of the data records, we observed
+# that the more keywords a data record has, more generic keywords are
+# and we also need to have date records with at least 3 key_words for our similarity search
+# so we decided on the size: minimum: 4 keywords and maximum: 6 keywords
+df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].apply(lambda x: isinstance(x, list) and len(x) >= 4 and len(x) <= 6)]
 
 
-count = 0
-seen_documents_pmid = set()
-question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", "Complex"] # 6 types
+# Here we randomly take 100 data records to generate questions
+# ??? to extract keywords for our similarity search based on keywords
+sampled_data_records = df_data_embeddings.sample(n=100, random_state=42)
+
+
+# Here we randomly take 40 records from 100 selected
+# With these 40 chunks, only one keyword will be used to find similar chunks
+# and eventually to generate a complex question
+one_keyword_records = sampled_data_records.sample(n=40, random_state=42)
+
+# Dropping 40 records (that uses one keyword for similarity) from the original 100 selected records.
+sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
+
+# Here we randomly take another 40 records from the remaining 60, initially selected records.
+# these chunks/records will use 2 keywords to find similar chunks to generate complex questions
+two_keywords_records = sampled_data_records.sample(n=40, random_state=42)
+
+# Dropping the records that will use 2 keywords for similariy search
+# and getting the final 20 records which will use 3 keywords to find related chunks/records for complex question generation
+three_keywords_records = sampled_data_records.drop(two_keywords_records.index)
+
+
+# Now we have 3 dataframes with the sizes of 40, 40, 20 respectively
+# Now we can generate the questions and do the complex question generation differently
+# depending on the dataframe that our record/chunk belongs to
+
+# 30 of 40 chunks that uses one keyword to find related chunks
+# will be compined with one another chunk that is the most similar to it for complex question generation
+# the oter 10 chunks will be compined with 2 other chunks that are the most similar to it for complex question generation
+count_for_one_keyword_two_chunks = 0 # 30
+
+# again 30 of 40 chunks that use two keywords to find related chunks
+# will be compined with one another chunk, and 10 chunks will be combined with 2 other most similar chunks
+# for complex question generation
+count_for_two_keywords_two_chunks = 0 # 30
+
+# 15 of 20 chunks that use three keywords to find related chunks
+# will be compined with one another chunk, and 5 chunks will be combined with 2 other most similar chunks
+count_for_three_keywords_two_chunks = 0 # 15
+
+
+# client = OpenAI(
+#     api_key = "# TO BE INSERTED HERE"
+# )
+
+question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", 
+                  "ComplexWithTwoChunks", "ComplexWithThreeChunks"] # 6 + 1 types
+
+
 prompts = ["You to generate a Yes/No question that require an understanding of a given context and deciding a \
 boolean value for an answer, e.g., 'Is Paris the capital of France?'. ",
             "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. \
@@ -30,22 +98,109 @@ elaborations on particular objects or events, e.g., “Why did Paris become the 
 Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
             "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario \
 and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
-"Complex Questions: PROMPT TO BE DETERMINED"
+            "You need to generate a Complex Question: Complex questions require multi-part reasoning by understanding \
+the semantics of multiple text snippets, 'What cultural and historical factors contributed to the development of the \
+Louvre Museum as a world-renowned art institution?' which requires inferring information from multiple documents to generate an answer."
 ]
 
-print(prompts)
-for i in range(df.shape[0]):
+# print(prompts)
+
+# Here I concatenate all the data records but we know that 
+# first we have chunks that we will use one keyword to find its similar chunks,
+# then we have records that we will use two keywords to find its similar chunks,
+# and finally we have records that we will use three keywords to find its similar chunks.
+# Rows of these records are stacked on top of the other.
+all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
+
+count = 0
+num_of_records = all_records.shape[0] # the number of samples we took 
+for i in range(num_of_records):
     if count == 10:
         break
-    pmid, abstract = df.iloc[i, ]
-    if pmid not in seen_documents_pmid and pmid not in already_processed_documents_pmid:
-        for i in range(5):
+    pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]
+
+    # checking if we have already processed this chunk
+    chunk_identifier = pmid + '_' + chunk_id
+    if chunk_identifier not in  already_processed_documents:
+        for j in range(6):
             time.sleep(30)
-            seen_documents_pmid.add(pmid) # multiple columns contain the same abstract due to chunking
             question_type = question_types[i]
-            prompt = prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. \
-The abstract is: " + abstract + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. \
+
+            # COMPLEX QUESTIONS
+            if j == 5: # Complex question
+                # Here we find how many keywords we need to use to find similar chunks
+                # and also get the keywords to be used
+                
+                # After finding the keywords to be used
+                # we also find the number of the most similar chunks we are looking for
+
+                # ONE KEYWORD SEARCH
+                if i < len(one_keyword_records): # we are still not done with one keyword seaches
+                    # one keywrod search
+                    keywords = key_words[0]
+                    if count_for_one_keyword_two_chunks < 30: 
+                        # we have to find only the most similar chunks
+                        # because we agreed on finding one similar chunk for 30 of 40 records
+                        num_of_similar_chunks = 1
+                        count_for_one_keyword_two_chunks += 1
+                    else:
+                        # otherwise we find two most similar chunks
+                        num_of_similar_chunks = 2
+
+                # TWO KEYWORDS SEARCH
+                elif i < len(one_keyword_records) + len(two_keywords_records): # we are still not done with two keywords searches
+                    # two keywords search
+                    keywords = key_words[0] + key_words[1]
+                    if count_for_two_keywords_two_chunks < 30: 
+                        # we have to find only the most similar chunks
+                        # because we agreed on finding one similar chunk for 30 of 40 records
+                        num_of_similar_chunks = 1
+                    else:
+                        num_of_similar_chunks = 2
+
+                # THREE KEYWORDS SEARCH
+                else:
+                    # three keywords search
+                    keywords = key_words[0] + key_words[1] + key_words[2]
+                    if count_for_three_keywords_two_chunks < 15:
+                        # we have to find only the most similar chunks
+                        # because we agreed on finding one similar chunk for 15 of 20 records
+                        num_of_similar_chunks = 1
+                    else:
+                        num_of_similar_chunks = 2
+                
+                # NOW WE HAVE EVERYTHING TO FIND THE MOST SIMILAR CHUNK(S)
+                # WE HAVE THE KEYWORDS AND WE HAVE SIZE OF OUR SEARCH, MEANING HOW MANY SIMILAR CHUNKS ARE WE INTERESTED IN
+                
+                # keywords
+                # num_of_similar_chunks
+                
+                # WE NEED TO EXTRACT THE CHUNKS HERE
+                similar_chunks = [...]        
+                chunk2 = similar_chunks[0]['chunk']
+                
+                if num_of_similar_chunks == 2:
+                    chunk3 = similar_chunks[1]['chunk']
+
+                # ONE SIMILAR CHUNK
+                if num_of_similar_chunks == 1:
+                    prompt = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2 + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+
+                # TWO SIMILAR CHUNKS
+                elif num_of_similar_chunks == 2:
+                    prompt = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2 + " The third text snippet is: " + chunk3 + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+            else:
+                prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
+The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
 DO NOT HALLUSINATE!!!"
             # print(question_type)
@@ -63,19 +218,30 @@ DO NOT HALLUSINATE!!!"
             reply = chat_completion.choices[0].message.content
             if reply.lower == "na":
                 continue
-            # print(reply)
+#             # print(reply)
             try:
                 # Check if ChatGPT gave the response in a correct format
                 result_list = ast.literal_eval(reply)
                 if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
                     # everything is good, we can add this to our dataset
-                    test_set_file_path = 'data/test_dataset.csv'
+                    test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
 
                     with open(test_set_file_path, 'a', newline='') as file:
                         csv_writer = csv.writer(file, delimiter='\t')
                         
-                        # PMID1, PMID2, PMID3, CHUNK1, CHUNK2, CHUNK3, abstract, question_type, question, answer, keywords_if_complex
-                        new_record = [pmid, "N/A", "N/A", "N/A", "N/A", "N/A", abstract, question_type] + result_list + ["N/A"]
+                        # PMID1, PMID2, PMID3, CHUNK_ID1, CHUNK_ID2, CHUNK_ID3, chunk, question_type, question, answer, keywords_if_complex
+
+                        # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
+                        if j == 5 and num_of_similar_chunks == 1:
+                            new_record = [pmid, pmid2, "N/A", chunk_id, chunk_id2, "N/A", chunk, question_type] + result_list + [key_words]
+
+                        if j == 5 and num_of_similar_chunks == 2:
+                            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, question_type] + result_list + [key_words]
+
+                        #NORMAL QUESTIONS
+                        else:
+                            new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, question_type] + result_list + ["N/A"]
+
                         csv_writer.writerow(new_record)
                 else:
                     print("WARNING: NOT CORRECTLY GENERATED")
@@ -89,45 +255,6 @@ DO NOT HALLUSINATE!!!"
         count += 1
 
 
-# Here we are taking sample of size 50, from which we can take the keywords
-# for our keyword based similarity search on opensearch
-df_data_embeddings = pandas.read_csv("data_preprocessing/data/data_embeddings_500_100.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'key_words'])
-
-df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].notna()] # data records with key_words
-
-df_data_embeddings['key_words'] = df_data_embeddings['key_words'].apply(ast.literal_eval) # convert the key_words to list type
-
-
-# After investigation of the data records, we observed
-# that the more keywords a data record has the keywords are more generic
-# and we also need to have dat records with at least 3 key_words for our similarity search
-# so we decided on the size: minimum: 4 keywords and maximum: 6 keywords
-df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].apply(lambda x: isinstance(x, list) and len(x) >= 4 and len(x) <= 6)]
-
-
-# Here we randomly take 50 data records to extract keywords
-# for our similarity search based on keywords
-sampled_data_records = df_data_embeddings.sample(n=50, random_state=42)
-
-# Here we randomly take 20 records from 50 selected
-# the first keyword of these 20 records will be used for similarity search with 1 keyword
-one_keyword_search = sampled_data_records.sample(n=20, random_state=42)
-
-# Dropping 20 records (for one keyword search) from the original 50 selected records
-sampled_data_records = sampled_data_records.drop(one_keyword_search.index)
-
-# Here we randomly take another 20 records from the remaining 30 initially selected records
-# for our similarity search with 2 keywords
-two_keywords_search = sampled_data_records.sample(n=20, random_state=42)
-
-# Dropping another 20 records (for two keyword search) from the remaining 30 records
-# and getting the final 10 records which will be used for similarity search with 3 keywords
-three_keywords_search = sampled_data_records.drop(two_keywords_search.index)
-
-# Now we have 3 dataframes with the sizes of 20, 20, 10 respectively
-# Now we can take the keywords from these dataframes for our keyword based similariy search
-
-# We keep only one keyword of the presented keywords (1st one) 
-# from the first dataframe for our similarity search with one keyword
-print(one_keyword_search['key_words'].head)
-
+# # We keep only one keyword of the presented keywords (1st one) 
+# # from the first dataframe for our similarity search with one keyword
+# print(one_keyword_search['key_words'].head)
