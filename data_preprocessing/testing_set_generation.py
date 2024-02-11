@@ -3,6 +3,27 @@ import re, csv
 from openai import OpenAI
 import ast
 import time
+from opensearchpy import OpenSearch
+# from angle_emb import AnglE, Prompts
+
+# Initialize AnglE embedding model
+# angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+# Enable Prompt.C for retrieval optimized embeddings
+# angle.set_prompt(prompt=Prompts.C)   
+
+# OpenSearch instance parameters
+host = 'localhost'
+port = 9200
+auth = ('admin', 'admin')
+
+# Create the client with SSL/TLS enabled and disable warnings
+client_OS= OpenSearch(
+    hosts = [{'host': host, 'port': port}],    
+    http_auth = auth,
+    use_ssl = True,
+    verify_certs = False,
+    ssl_show_warn = False,
+)
 
 # To create the test set csv file - run only once
 '''
@@ -120,7 +141,7 @@ for i in range(num_of_records):
     pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]
 
     # checking if we have already processed this chunk
-    chunk_identifier = pmid + '_' + chunk_id
+    chunk_identifier = str(pmid) + '_' + str(chunk_id)
     if chunk_identifier not in  already_processed_documents:
         for j in range(6):
             time.sleep(30)
@@ -178,11 +199,38 @@ for i in range(num_of_records):
                 # num_of_similar_chunks
                 
                 # WE NEED TO EXTRACT THE CHUNKS HERE
-                similar_chunks = [...]        
-                chunk2 = similar_chunks[0]['chunk']
+                query = keywords
+                print(keywords)
+                # query_emb = angle.encode({'text': query})
+
+                search_query_sparse = {
+                    "query": {
+                        "match": {
+                            "chunk": query
+                        }
+                    },
+                    "size": num_of_similar_chunks
+                }
+
+                results_sparse = client_OS.search(index="pubmed_500_100", body=search_query_sparse)
+
+                similar_chunks = [] 
+                for hit in results_sparse['hits']['hits']:
+                    # id = hit['_id']
+                    # score = hit['_score']
+                    # pmid = hit['_source']['pmid']
+                    # chunk_id = hit['_source']['chunk_id']  
+                    chunk = hit['_source']['chunk']
+                    similar_chunks.append(chunk) 
+                    # pretty_output = (f"\nID: {id}\nPMID: {pmid}\nChunk ID: {chunk_id}\nText: {chunk}")
+                    # print(pretty_output)
+                
+                print(similar_chunks)
+
+                chunk2 = similar_chunks[0]
                 
                 if num_of_similar_chunks == 2:
-                    chunk3 = similar_chunks[1]['chunk']
+                    chunk3 = similar_chunks[1]
 
                 # ONE SIMILAR CHUNK
                 if num_of_similar_chunks == 1:
