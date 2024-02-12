@@ -25,42 +25,59 @@ client_OS= OpenSearch(
     ssl_show_warn = False,
 )
 
-# To create the test set csv file - run only once
-'''
-with open("data_preprocessing/test_data/test_dataset.csv", 'w', newline='') as file:
-    # Create a CSV writer object with tab as the delimiter
-    csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
+def create_test_csv(file_path):
+    with open(file_path, 'w', newline='') as file:
+        # Create a CSV writer object with tab as the delimiter
+        csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
 
-    header = ["pmid", "pmid2", "pmid3", "chunk_id", "chunk_id2", "chunk_id3", "chunk", 
-    "question_type", "question", "answer", "keywords_if_complex"]
-    csv_writer.writerow(header)
-'''
+        header = ["pmid", "pmid2", "pmid3", "chunk_id", "chunk_id2", "chunk_id3", "chunk", "chunk2", "chunk3",
+        "question_type", "question", "answer", "keywords_if_complex"]
+        csv_writer.writerow(header)
+
+
+def get_useful_records(original_file_path):
+    '''
+    This function is used to get the useful data records that we can use to sample from.
+    It takes the original file path and takes the data records, and creates a new file with processed data
+    that has keywords - and the number of keywords should be 4 to 6.
+    This function is used once, so that we do not need to preprocess the documents multiple times
+    each time we want to generate questions
+    '''
+    df_processed = pandas.read_csv(original_file_path, usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
+
+    # Here we need to keep the data records with keywords because we need the keywords
+    # for our similarity search - to find related documents to generate complex questions
+    df_processed = df_processed[df_processed['key_words'].notna()] # data records with key_words
+
+    df_processed['key_words'] = df_processed['key_words'].apply(ast.literal_eval) # convert the key_words to list type
+
+    # After investigation of the data records, we observed
+    # that the more keywords a data record has, more generic keywords are
+    # and we also need to have date records with at least 3 key_words for our similarity search
+    # so we decided on the size: minimum: 4 keywords and maximum: 6 keywords
+    df_processed = df_processed[df_processed['key_words'].apply(lambda x: isinstance(x, list) and len(x) >= 4 and len(x) <= 6)]
+
+    df_processed.to_csv("data_preprocessing/data/processed_data_for_testing.csv", index=False)
+
+    return
+
+# create_test_csv("data_preprocessing/test_data/test_dataset.csv") # To create the test set csv file - run only once
+
+# run only once to process the original data embeddings file and create a new one
+# get_useful_records("data_preprocessing/data/data_embeddings_500_100.csv") 
 
 # Here we store the chunks that we have already processed, in order not to use in the future
 df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid", "chunk_id"], sep='\t')
 already_processed_documents= set(df_already_processed_documents['pmid'] + '_' + df_already_processed_documents['chunk_id'])
 
-# # print(already_processed_documents)
+# print(already_processed_documents)
 
-# Here we are taking sample of size 50 to generate questions
-# ?? from which we can take the keywords for our keyword based similarity search on opensearch
-df_data_embeddings = pandas.read_csv("data_preprocessing/data/data_embeddings_500_100.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
+df_data_embeddings = pandas.read_csv("data_preprocessing/data/processed_data_for_testing.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
 
-# Here we need to keep the data records with keywords because we need the keywords
-# for our similarity search - to find related documents to generate complex questions
-df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].notna()] # data records with key_words
-
-df_data_embeddings['key_words'] = df_data_embeddings['key_words'].apply(ast.literal_eval) # convert the key_words to list type
-
-# After investigation of the data records, we observed
-# that the more keywords a data record has, more generic keywords are
-# and we also need to have date records with at least 3 key_words for our similarity search
-# so we decided on the size: minimum: 4 keywords and maximum: 6 keywords
-df_data_embeddings = df_data_embeddings[df_data_embeddings['key_words'].apply(lambda x: isinstance(x, list) and len(x) >= 4 and len(x) <= 6)]
-
+# print(df_data_embeddings.head())
+# print(df_data_embeddings.shape)
 
 # Here we randomly take 100 data records to generate questions
-# ??? to extract keywords for our similarity search based on keywords
 sampled_data_records = df_data_embeddings.sample(n=100, random_state=42)
 
 
@@ -283,10 +300,11 @@ DO NOT HALLUSINATE!!!"
 
                         # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
                         if j == 5 and num_of_similar_chunks == 1:
-                            new_record = [pmid, pmid2, "N/A", chunk_id, chunk_id2, "N/A", chunk, question_type] + result_list + [key_words]
+                            new_record = [pmid, pmid2, "N/A", chunk_id, chunk_id2, "N/A", chunk, chunk2, "N/A", question_type] + result_list + [key_words]
 
+                        # 3 CHUNKS USED FOR COMPLEX QUESTION GENERATION
                         if j == 5 and num_of_similar_chunks == 2:
-                            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, question_type] + result_list + [key_words]
+                            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, question_type] + result_list + [key_words]
 
                         #NORMAL QUESTIONS
                         else:
