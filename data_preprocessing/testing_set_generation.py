@@ -78,20 +78,21 @@ df_data_embeddings = pandas.read_csv("data_preprocessing/data/processed_data_for
 # print(df_data_embeddings.shape)
 
 # Here we randomly take 100 data records to generate questions
-sampled_data_records = df_data_embeddings.sample(n=100, random_state=42)
+sampled_data_records = df_data_embeddings.sample(n=100)
+print(sampled_data_records)
 
 
 # Here we randomly take 40 records from 100 selected
 # With these 40 chunks, only one keyword will be used to find similar chunks
 # and eventually to generate a complex question
-one_keyword_records = sampled_data_records.sample(n=40, random_state=42)
+one_keyword_records = sampled_data_records.sample(n=40)
 
 # Dropping 40 records (that uses one keyword for similarity) from the original 100 selected records.
 sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
 
 # Here we randomly take another 40 records from the remaining 60, initially selected records.
 # these chunks/records will use 2 keywords to find similar chunks to generate complex questions
-two_keywords_records = sampled_data_records.sample(n=40, random_state=42)
+two_keywords_records = sampled_data_records.sample(n=40)
 
 # Dropping the records that will use 2 keywords for similariy search
 # and getting the final 20 records which will use 3 keywords to find related chunks/records for complex question generation
@@ -117,12 +118,12 @@ count_for_two_keywords_two_chunks = 0 # 30
 count_for_three_keywords_two_chunks = 0 # 15
 
 
-# client = OpenAI(
-#     api_key = "# TO BE INSERTED HERE"
-# )
+client = OpenAI(
+    api_key = "# TO BE INSERTED HERE"
+)
 
 question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", 
-                  "ComplexWithTwoChunks", "ComplexWithThreeChunks"] # 6 + 1 types
+                  "Complex"] # 6 + 1 types
 
 
 prompts = ["You to generate a Yes/No question that require an understanding of a given context and deciding a \
@@ -150,19 +151,20 @@ Louvre Museum as a world-renowned art institution?' which requires inferring inf
 # Rows of these records are stacked on top of the other.
 all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
 
-count = 0
+# count = 0
 num_of_records = all_records.shape[0] # the number of samples we took 
 for i in range(num_of_records):
-    if count == 10:
-        break
+    # if count == 100:
+    #     break
     pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]
+    key_words = ast.literal_eval(key_words)
 
     # checking if we have already processed this chunk
     chunk_identifier = str(pmid) + '_' + str(chunk_id)
     if chunk_identifier not in  already_processed_documents:
         for j in range(6):
             time.sleep(30)
-            question_type = question_types[i]
+            question_type = question_types[j]
 
             # COMPLEX QUESTIONS
             if j == 5: # Complex question
@@ -188,7 +190,7 @@ for i in range(num_of_records):
                 # TWO KEYWORDS SEARCH
                 elif i < len(one_keyword_records) + len(two_keywords_records): # we are still not done with two keywords searches
                     # two keywords search
-                    keywords = key_words[0] + key_words[1]
+                    keywords = key_words[0] + " " + key_words[1]
                     if count_for_two_keywords_two_chunks < 30: 
                         # we have to find only the most similar chunks
                         # because we agreed on finding one similar chunk for 30 of 40 records
@@ -200,7 +202,7 @@ for i in range(num_of_records):
                 # THREE KEYWORDS SEARCH
                 else:
                     # three keywords search
-                    keywords = key_words[0] + key_words[1] + key_words[2]
+                    keywords = key_words[0] + " " + key_words[1] + " " + key_words[2]
                     if count_for_three_keywords_two_chunks < 15:
                         # we have to find only the most similar chunks
                         # because we agreed on finding one similar chunk for 15 of 20 records
@@ -212,42 +214,66 @@ for i in range(num_of_records):
                 # NOW WE HAVE EVERYTHING TO FIND THE MOST SIMILAR CHUNK(S)
                 # WE HAVE THE KEYWORDS AND WE HAVE SIZE OF OUR SEARCH, MEANING HOW MANY SIMILAR CHUNKS ARE WE INTERESTED IN
                 
-                # keywords
-                # num_of_similar_chunks
-                
                 # WE NEED TO EXTRACT THE CHUNKS HERE
+                # print(keywords)
                 query = keywords
-                print(keywords)
+                # print("KEYWORDS: ", keywords)
                 # query_emb = angle.encode({'text': query})
 
+                size = num_of_similar_chunks + 1 # + 1 is because of the fact that the chunk itself may appear as one of the similar chunks
                 search_query_sparse = {
                     "query": {
                         "match": {
                             "chunk": query
                         }
                     },
-                    "size": num_of_similar_chunks
+                    "size": size
                 }
 
                 results_sparse = client_OS.search(index="pubmed_500_100", body=search_query_sparse)
 
                 similar_chunks = [] 
+                similar_chunks_pmids = []
+                similar_chunks_chunk_ids = []
                 for hit in results_sparse['hits']['hits']:
                     # id = hit['_id']
                     # score = hit['_score']
-                    # pmid = hit['_source']['pmid']
-                    # chunk_id = hit['_source']['chunk_id']  
-                    chunk = hit['_source']['chunk']
-                    similar_chunks.append(chunk) 
-                    # pretty_output = (f"\nID: {id}\nPMID: {pmid}\nChunk ID: {chunk_id}\nText: {chunk}")
-                    # print(pretty_output)
-                
-                print(similar_chunks)
+                    pmid_similar = hit['_source']['pmid']
+                    chunk_id_similar = hit['_source']['chunk_id']  
+                    if pmid_similar == pmid and chunk_id_similar == chunk_id: # if the found similar chunk is the chunk itself
+                        print("FOUND ITSELF")
+                        continue
+                    
+                    chunk_similar = hit['_source']['chunk']
 
-                chunk2 = similar_chunks[0]
+                    similar_chunks.append(chunk_similar)
+                    similar_chunks_pmids.append(pmid_similar)
+                    similar_chunks_chunk_ids.append(chunk_id_similar)
+                # print(similar_chunks)
                 
-                if num_of_similar_chunks == 2:
+                # print("OWN PMID:", pmid)
+                # print("OWN CHUNK-ID", chunk_id)
+                # print("SIMILAR PMID: ", similar_chunks_pmids)
+                # print("SIMILAR CHUNK-IDS", similar_chunks_chunk_ids)
+                # print("CHUNK:", chunk)
+                # print("SIMILAR CHUNKS:", similar_chunks)
+
+                if len(similar_chunks) == 0: # NO SIMILAR CHUNK FOUND
+                    # A COMPLEX QUESTION CANNOT BE FORMED!
+                    print("NO SIMILAR CHUNK FOUND")
+                    break
+
+                elif num_of_similar_chunks == 1:
+                    pmid2 = similar_chunks_pmids[0]
+                    chunk2 = similar_chunks[0]
+                    chunk_id2 = similar_chunks_chunk_ids[0]
+                
+                elif num_of_similar_chunks == 2:
+                    # print("3 CHUNKS!!!!!!")
+                    pmid3 = similar_chunks_pmids[1]
                     chunk3 = similar_chunks[1]
+                    chunk_id3 = similar_chunks_chunk_ids[1]
+
 
                 # ONE SIMILAR CHUNK
                 if num_of_similar_chunks == 1:
@@ -285,7 +311,7 @@ DO NOT HALLUSINATE!!!"
             reply = chat_completion.choices[0].message.content
             if reply.lower == "na":
                 continue
-#             # print(reply)
+            # print(reply)
             try:
                 # Check if ChatGPT gave the response in a correct format
                 result_list = ast.literal_eval(reply)
@@ -296,8 +322,6 @@ DO NOT HALLUSINATE!!!"
                     with open(test_set_file_path, 'a', newline='') as file:
                         csv_writer = csv.writer(file, delimiter='\t')
                         
-                        # PMID1, PMID2, PMID3, CHUNK_ID1, CHUNK_ID2, CHUNK_ID3, chunk, question_type, question, answer, keywords_if_complex
-
                         # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
                         if j == 5 and num_of_similar_chunks == 1:
                             new_record = [pmid, pmid2, "N/A", chunk_id, chunk_id2, "N/A", chunk, chunk2, "N/A", question_type] + result_list + [key_words]
@@ -308,21 +332,18 @@ DO NOT HALLUSINATE!!!"
 
                         #NORMAL QUESTIONS
                         else:
-                            new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, question_type] + result_list + ["N/A"]
+                            new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, "N/A", "N/A", question_type] + result_list + ["N/A"]
 
                         csv_writer.writerow(new_record)
+                        
                 else:
                     print("WARNING: NOT CORRECTLY GENERATED")
                     # print(reply)
                     continue
             except (SyntaxError, ValueError):
                 print("WARNING: A LIST IS NOT GENERATED!")
-                print(reply)
+                # print(reply)
                 continue
             # print(reply)
-        count += 1
-
-
-# # We keep only one keyword of the presented keywords (1st one) 
-# # from the first dataframe for our similarity search with one keyword
-# print(one_keyword_search['key_words'].head)
+        already_processed_documents.add(chunk_identifier)
+        # count += 1
