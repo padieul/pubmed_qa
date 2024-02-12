@@ -3,6 +3,7 @@ uvicorn
 opensearch-py
 angle-emb # it takse sometime to download
 langchain # it takes sometime to downlaod
+langchainhub
 replicate
 
 # the total time to download all libraries is about 15 minutes

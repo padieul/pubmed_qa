@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils import llm_model, opensearch_vector_store
 from config import set_api_keys
 from langchain.chains import RetrievalQA
+from langchain import hub
 
 
 # Setup all API tokens
@@ -15,9 +16,16 @@ llm = llm_model()
 vector_store = opensearch_vector_store(index_name="pubmed_500_100")
 retriever = vector_store.as_retriever(search_kwargs={"k": 10})
 
+# Adding a RAG prompt from langChain
+prompt = hub.pull("rlm/rag-prompt")
+
 # Initialize langChain RAG pipeline
 rag_pipeline = RetrievalQA.from_chain_type(
-    llm=llm, chain_type="stuff", retriever=retriever, verbose=True
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    chain_type_kwargs={"prompt": prompt},
+    verbose=True,
 )
 
 
