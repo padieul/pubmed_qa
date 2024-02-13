@@ -1,17 +1,39 @@
 
 # A RAG-based system for Pubmed
 
-**Table of Contents**
-* [Overview](#overview)
-* [Data Collection](#data-collection)
-* [Evaluation Metrics](#evaluation-metrics)
-* [Test Dataset Generation](#test-dataset-generation)
+## Table of Contents
+1. [Overview](#overview)
+1. [Data Preparation](#data-preparation)
+    1. [Data Collection](#data-collection)
+1. [Evaluation Metrics](#evaluation-metrics)
+1. [Test Dataset Generation](#test-dataset-generation)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>.
 
 
-## Data Collection
+## Data Preparation
+
+### Data Collection
+
+The traditional [`E-utilities`](https://www.ncbi.nlm.nih.gov/books/NBK25499/) are the usual tool to collect data from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/) website, but these tools allow a maximum of 10000 records to be retrieved in a search request. On the other hand, the number of the abstracts to be collected for this project is in the range of 59000 and this number of abstracts cannot be downloaded using the traditional tools, therefore we used the [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) tool on the Unix command line as it does not have this limitation. 
+
+Under [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) there are two commands that we used to retrieve the records from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/),  `esearch` which is used to search for the abstracts within a specific time range and specific keywords, and `efetch` which retrieve the actual records found by `esearch`. 
+
+> We tried to pipeline `efetch` after `esearch` directly to download the records from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/) but that did not work properly, so we used `esearch` to search for and store the article IDs of all article that have the word `intelligence` in the abstract or in the title of the article as indicated in the project specifications, we then used `efetch` separately to download the articles using the article IDs we collected using `esearch`, in this second stage we excluded any article outside the time range between 2013 and 2023.
+
+[`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) commands used to retrieve the article IDs:
+
+```PowerShell
+esearch -db pubmed -query "intelligence [title/abstract] hasabstract" | efetch -format uid >articles_ids.csv
+```
+
+The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data_v2.py`](data_preprocessing\retrieve_pubmed_data_v2.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
+
+ ```Python
+ Entrez.efetch(db="pubmed", id=idlist[i:j], rettype='medline', retmode='text')
+ ```
+
 
 ## Evaluation Metrics
 
