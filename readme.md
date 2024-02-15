@@ -28,12 +28,28 @@ Under [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) there are two c
 esearch -db pubmed -query "intelligence [title/abstract] hasabstract" | efetch -format uid >articles_ids.csv
 ```
 
-The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data_v2.py`](data_preprocessing\retrieve_pubmed_data_v2.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
+The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data_v2.py`](data_preprocessing/retrieve_pubmed_data_v2.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
 
  ```Python
  Entrez.efetch(db="pubmed", id=idlist[i:j], rettype='medline', retmode='text')
  ```
 
+
+### Data Chunking
+
+To comply with the maximum sequence length of both the embedding and the LLM models, and to provide a diverse and granular context, the abstracts had to be chunked into smaller pieces before they are indexed and stored in OpenSearch. We also left an overlap margin between subsequent chunks to keep the context connected and more natural. We experimented with multiple chunk sizes 500, 800 and 100 characters and multiple overlap windows 100, 200 and 250 and we ended up using the chunk size of 500 characters and am overlap windows of 200 as it provided the best retrieval performance compared to the other options. This could be attributed to the fact that smaller chunks can generate more accurate embeddings as the mean pooling is restricted to a shorter list of tokens. 
+
+For chunking, we used `RecursiveCharacterTextSplitter` in [`LangChain`](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter)
+
+```Python
+    # Initialize langChain splitter to split abstracts
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=["\n\n", "\n", " ", ""])
+
+    # Chunking the abstract with the splitter
+    chunks = text_splitter.split_text(str(row['Abstract']))
+```
+
+The chunking is done using the script [`data_chunking_v2.py`](data_preprocessing/data_chunking_v2.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
 
 ## Evaluation Metrics
 

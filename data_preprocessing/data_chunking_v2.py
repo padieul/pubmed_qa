@@ -32,7 +32,7 @@ def chunk_data(source_file: str=None, chunk_size: int=500, chunk_overlap: int=25
 
     # Iterate over the data and chunk the abstracts (add an id number for each chunk)
     for index, row in tqdm(df_data.iterrows(), total=df_data.shape[0], desc='Chunking data'):    
-        
+        # Chunking the abstract with the splitter
         chunks = text_splitter.split_text(str(row['Abstract']))
 
         for i in range(len(chunks)):

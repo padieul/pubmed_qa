@@ -24,6 +24,7 @@ rag_pipeline = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
     retriever=retriever,
+    return_source_documents=True,
     chain_type_kwargs={"prompt": prompt},
     verbose=True,
 )
@@ -55,7 +56,7 @@ def retrieve_documents(query_str: str):
     """
     A complete end-to-end RAG to answer user questions
     """
-    answer = rag_pipeline(query_str)
+    answer = rag_pipeline({"query": query_str})
     return {"message": answer["result"]}
 
 
