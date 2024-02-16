@@ -1,3 +1,4 @@
 app/frontend/node_modules
 app/middleware/config.py
 data_preprocessing/data/
+**/__pycache__/
