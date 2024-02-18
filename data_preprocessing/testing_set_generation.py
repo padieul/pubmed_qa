@@ -1,6 +1,7 @@
 import pandas
 import re, csv
 from openai import OpenAI
+# import replicate
 import ast
 import time
 from opensearchpy import OpenSearch
@@ -61,6 +62,34 @@ def get_useful_records(original_file_path):
 
     return
 
+
+def complex_from_llama2(prompt):
+    import replicate
+    '''
+    This function is used to generate complex questions by taking a prompt as an input
+    sending it to llama2 for question generation
+    '''
+    replicate = replicate.Client(api_token="") # Replicate API to be inserted here
+
+    output = replicate.run(
+    "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+    input={
+        "prompt": prompt
+    }
+    )
+
+    output = "".join(output)
+
+    question_start = output.find("Question:")
+    answer_start = output.find("Answer:")
+
+    question = output[question_start + len("Question:"):answer_start].strip()
+    answer = output[answer_start + len("Answer:"):].strip()
+    print("YESSSS!!!!")
+
+    return [question, answer]
+
+
 # create_test_csv("data_preprocessing/test_data/test_dataset.csv") # To create the test set csv file - run only once
 
 # run only once to process the original data embeddings file and create a new one
@@ -68,7 +97,8 @@ def get_useful_records(original_file_path):
 
 # Here we store the chunks that we have already processed, in order not to use in the future
 df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid", "chunk_id"], sep='\t')
-already_processed_documents= set(df_already_processed_documents['pmid'] + '_' + df_already_processed_documents['chunk_id'])
+already_processed_documents= set(df_already_processed_documents['pmid'].astype(str) + '_' + df_already_processed_documents['chunk_id'].astype(str))
+print(already_processed_documents)
 
 # print(already_processed_documents)
 
@@ -119,7 +149,7 @@ count_for_three_keywords_two_chunks = 0 # 15
 
 
 client = OpenAI(
-    api_key = "# TO BE INSERTED HERE"
+    api_key = "" # OpenAI api to be inserted here
 )
 
 question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", 
@@ -138,7 +168,7 @@ Causal questions have descriptive answers that can range from a few sentences to
             "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario \
 and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
             "You need to generate a Complex Question: Complex questions require multi-part reasoning by understanding \
-the semantics of multiple text snippets, 'What cultural and historical factors contributed to the development of the \
+the semantics of multiple text snippets, e.g. 'What cultural and historical factors contributed to the development of the \
 Louvre Museum as a world-renowned art institution?' which requires inferring information from multiple documents to generate an answer."
 ]
 
@@ -290,6 +320,7 @@ The first text snippet is: " + chunk + " The second text snippet is: " + chunk2 
 just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
 IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+                    # print(prompt)
             else:
                 prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
 The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
@@ -299,18 +330,23 @@ DO NOT HALLUSINATE!!!"
             # print(question_type)
             # print(prompt)
             if prompt:
-                chat_completion = client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    model="gpt-3.5-turbo-1106"
-                )
-            reply = chat_completion.choices[0].message.content
-            if reply.lower == "na":
-                continue
+                if j == 5: # if complex then use llama
+                    reply = complex_from_llama2(prompt)
+                else: # else use gpt 3.5
+                    # reply = "na"
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        model="gpt-3.5-turbo-1106"
+                    )
+                    reply = chat_completion.choices[0].message.content
+                
+                if reply.lower == "na":
+                    continue
             # print(reply)
             try:
                 # Check if ChatGPT gave the response in a correct format
@@ -347,3 +383,5 @@ DO NOT HALLUSINATE!!!"
             # print(reply)
         already_processed_documents.add(chunk_identifier)
         # count += 1
+
+
