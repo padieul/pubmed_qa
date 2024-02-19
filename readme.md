@@ -5,6 +5,7 @@
 1. [Overview](#overview)
 1. [Data Preparation](#data-preparation)
     1. [Data Collection](#data-collection)
+    1. [Data Chunking](#data-chunking)
 1. [Evaluation Metrics](#evaluation-metrics)
 1. [Test Dataset Generation](#test-dataset-generation)
 

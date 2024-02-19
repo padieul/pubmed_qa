@@ -2,6 +2,7 @@ from opensearchpy import OpenSearch
 from models import AnglEModel
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_community.llms import Replicate
+from langchain import HuggingFaceHub
 
 
 def pretty_response(response):
@@ -76,7 +77,7 @@ def opensearch_vector_store(index_name: str = None):
     return os_store
 
 
-def llm_model(name: str = "replicate"):
+def llm_model(name: str = "falcon-7b-instruct"):
     """
     Create a new LLM model for langChain pipeline
     """
@@ -85,4 +86,20 @@ def llm_model(name: str = "replicate"):
             model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
             model_kwargs={"temperature": 0.01, "max_length": 500, "top_p": 1},
         )
+    elif name == "falcon-7b-instruct":
+        repo_id = "tiiuae/falcon-7b-instruct" 
+        llm = HuggingFaceHub(
+            repo_id=repo_id, model_kwargs={"temperature": 0.01, "max_new_tokens": 500}
+        )        
     return llm
+
+
+def build_references(sources):
+    '''
+    Format a list of URLs from the source documents returned from the vector database
+    '''
+    references = "\n\nReferences:"
+    for source in sources:
+        url = f"\nhttps://pubmed.ncbi.nlm.nih.gov/{str(source.metadata['pmid'])}/"
+        references += url
+    return references
