@@ -7,6 +7,7 @@
     1. [Data Collection](#data-collection)
     1. [Data Chunking](#data-chunking)
     1. [Data Embedding](#data-embedding)
+    1. [Data Storage](#data-storage)
 1. [Evaluation Metrics](#evaluation-metrics)
 1. [Test Dataset Generation](#test-dataset-generation)
 
