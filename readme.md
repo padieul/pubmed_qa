@@ -72,6 +72,59 @@ vec = angle.encode({'text': 'hello world'}, to_numpy=True)
 
 We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
 
+### Data Storage
+
+To store the data with their embeddings in OpenSearch we created an index with k-NN enabled and we defined the data types mapping as in the snippet below. 
+
+```yml
+    index_mapping = {
+        "settings": {
+            "index": {
+            "knn": True,
+            "knn.algo_param.ef_search": 100
+            }
+        },
+        "mappings": {
+            "properties": {
+                "pmid": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "text"
+                },
+                "chunk_id": {
+                    "type": "integer"
+                },
+                "chunk": {
+                    "type": "text"
+                },
+                "year": {
+                    "type": "integer"
+                },
+                "month": {
+                    "type": "integer"
+                },
+                "embedding": {
+                    "type": "knn_vector",
+                    "dimension": 1024,
+                    "method": {
+                        "name": "hnsw",
+                        "engine": "lucene"
+                    }                
+                },
+                "vector_field": {
+                    "type": "alias",
+                    "path" : "embedding"
+                }
+            }
+        }
+    }
+```
+
+We used [`lucene`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) as an approximate k-NN library for indexing and search with the method [`hnsw`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) for k-NN approximation.
+
+> We created an alias for the vector field to keep using the default name `vector_field` in addition to the customized name we chose `embedding` because [`LangChain`](https://www.langchain.com/) libraries seem to recognize the default name only!
+
 ## Evaluation Metrics
 
 Let's have an example to better understand the below mentioned evaluation metrics.
