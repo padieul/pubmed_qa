@@ -6,6 +6,7 @@
 1. [Data Preparation](#data-preparation)
     1. [Data Collection](#data-collection)
     1. [Data Chunking](#data-chunking)
+    1. [Data Embedding](#data-embedding)
 1. [Evaluation Metrics](#evaluation-metrics)
 1. [Test Dataset Generation](#test-dataset-generation)
 
@@ -51,6 +52,25 @@ For chunking, we used `RecursiveCharacterTextSplitter` in [`LangChain`](https://
 ```
 
 The chunking is done using the script [`data_chunking_v2.py`](data_preprocessing/data_chunking_v2.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
+
+### Data Embedding
+
+We chose the [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) as our embedding model because it is listed 6th on the [`MTEB Leaderboard`](https://huggingface.co/spaces/mteb/leaderboard) with a retrieval performance close to a much larger models. The size of this model is just 1.34 GB which make it suitable to run locally without the need for any subscription or remote API calls. The model provides two separate embedding options, a standard option to embed the document to be retrieved and a customized option that is augmented with a prompt to generate a query embedding that is more appropriate for retrieval tasks. 
+
+```Python
+from angle_emb import AnglE
+
+# Document embedding
+angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+vec = angle.encode('hello world', to_numpy=True)
+
+# Query embedding
+angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+angle.set_prompt(prompt=Prompts.C)
+vec = angle.encode({'text': 'hello world'}, to_numpy=True)
+```
+
+We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
 
 ## Evaluation Metrics
 
