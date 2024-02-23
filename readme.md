@@ -180,11 +180,41 @@ Reference text = "Students enjoy doing homeworks"
     6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
 
     Question Generation Process:
-    We use the available abstacts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract. One of 5 prompts for each question type is used along with a given abstract to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
-    Here is our prompt: 
+    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available 
+    [api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.]
+    One of 6 prompts for each question type is used along with a given chunks (chunks in the case of complex questions) to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
 
-    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + abstract + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
+    For complex questions, we find one or two most similar chunks to the given chunk. 
+    We find the most similar chunk(s) as following:
+    Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
+    We divide the sample into 3 parts with the sizes of 40, 40, 20. 
+    1) In the first 40 records, we do sparse search with just one keyword.
+    2) In the second part that has 40 records, we do the sparse search with two keywords.
+    3) In the final part that has 20 records, we do the sparse search with three keywords.
+
+    When we do the dense search for similar chunks, we do not use keywords, but we use the embedding of the chunk to find similar chunks.
+    We do the dense search right after we do the sparse search in our iteration over the records. So we go through the same samples of sizes of 40, 40, 20. 
+    In the first part of the sample that has 40 records. In the first 30 of those records (75%) we look for the most similar chunk. That applies to both sparse and dense searches. 
     
+    Althoug we are looking for the most similar chunk, here we do the search with the size of 2. 
+    That is because of the fact that it is perfectly possible to get the chunk itself while we are searching for its similars. If it is the case, we do not consider the chunk itself. If it is not, we take the most similar not considering the remaining similars.
+    
+    In the remaining part of these records - the remaining 10 (25%), we are search for the two most similar chunks. Similarly, making the search size 3 because of the possibility of getting the chunk itself as its similar.
+
+    That is the same for the remaining two part of the whole sample with the sizes of 40, 20, respectively. We do the search for the most similar chunk for the 75% of the part, and do search for the two most similar chunks for the 25% of the part. 
+
+    The whole idea of dividing the sample to 3 parts with 40, 40, 20 records, respectively is to get similar chunks with a specific number of keywords (1 keyword, 2 keywords, 3 keywords). That is only for the sparse search and has not effect on dense search. 
+
+    [CONTINUE THE WORK FROM HERE!!]
+    Sparse Search: We take 
+    
+    Here is our prompt [for questions other than complex questions]: 
+
+    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
+    
+    Here is our prompt(s) [for complex questions with 2 chunks - a chunk and its most similar chunk]
+
+
     In this scenario, prompts[i] is a prompt specific to the question type. Those prompts can be found below:
 
     prompts = [
