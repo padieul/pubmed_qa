@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils import llm_model, opensearch_vector_store, build_references
+from utils import llm_model, opensearch_vector_store, build_references, processed_output
 from config import set_api_keys
 from langchain.chains import RetrievalQA
 from langchain import hub
@@ -52,13 +52,15 @@ def read_root(message: str):
 
 
 @app.get("/retrieve_documents_dense")
-def retrieve_documents(query_str: str):
+async def retrieve_documents(query_str: str):
     """
     A complete end-to-end RAG to answer user questions
     """
     answer = rag_pipeline.invoke({"query": query_str})    
+
+    output = processed_output(answer["result"])
     
-    return {"message": answer["result"] + build_references(answer["source_documents"])}
+    return {"message": output + "\n\n" + build_references(answer["source_documents"])}
 
 
 @app.get("/retrieve_documents_sparse")
