@@ -148,9 +148,9 @@ count_for_two_keywords_two_chunks = 0 # 30
 count_for_three_keywords_two_chunks = 0 # 15
 
 
-client = OpenAI(
-    api_key = "" # OpenAI api to be inserted here
-)
+# client = OpenAI(
+#     api_key = "" # OpenAI api to be inserted here
+# )
 
 question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", 
                   "Complex"] # 6 + 1 types
@@ -393,63 +393,71 @@ DO NOT HALLUSINATE!!!"
             if prompt or prompt_sparse or prompt_dense:
                 if j == 5: # if complex then use llama
                     if prompt_sparse:
-                        reply_complex_keyword = complex_from_llama2(prompt_sparse)
+                        print(f"SPARSE: I:{i} J: {j}\n\n\n\n")
+                        print(prompt_sparse)
+                        print("\n\n\n\n")
+                        # reply_complex_keyword = complex_from_llama2(prompt_sparse)
                     if prompt_dense:
-                        reply_complex_vector = complex_from_llama2(prompt_dense) # add something
+                        print(f"DENSE: I:{i} J: {j}\n\n\n\n")
+                        print(prompt_dense)
+                        print("\n\n\n\n")
+                        # reply_complex_vector = complex_from_llama2(prompt_dense) # add something
 
                 else: # else use gpt 3.5
                     # reply = "na"
-                    chat_completion = client.chat.completions.create(
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                        model="gpt-3.5-turbo-1106"
-                    )
-                    reply = chat_completion.choices[0].message.content
+                    print(f"I:{i} J: {j}")
+                    print(prompt)
+                    # chat_completion = client.chat.completions.create(
+                    #     messages=[
+                    #         {
+                    #             "role": "user",
+                    #             "content": prompt
+                    #         }
+                    #     ],
+                    #     model="gpt-3.5-turbo-1106"
+                    # )
+                    # reply = chat_completion.choices[0].message.content
                 
-                if reply.lower == "na":
-                    continue
+                # if reply.lower == "na":
+                #     continue
             # print(reply)
-            try:
-                # Check if ChatGPT gave the response in a correct format
-                result_list = ast.literal_eval(reply)
-                if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
-                    # everything is good, we can add this to our dataset
-                    test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
+        #     try:
+        #         # Check if ChatGPT gave the response in a correct format
+        #         result_list = ast.literal_eval(reply)
+        #         if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
+        #             # everything is good, we can add this to our dataset
+        #             test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
 
-                    with open(test_set_file_path, 'a', newline='') as file:
-                        csv_writer = csv.writer(file, delimiter='\t')
+        #             with open(test_set_file_path, 'a', newline='') as file:
+        #                 csv_writer = csv.writer(file, delimiter='\t')
                         
-                        # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
-                        if j == 5 and num_of_similar_chunks == 1:
-                            new_record = [pmid, pmid2_sparse, "N/A", chunk_id, chunk_id2_sparse, "N/A", chunk, chunk2_sparse, "N/A", question_type] + result_list + [key_words]
-                            new_record_dense = [pmid, pmid2_dense, "N/A", chunk_id, chunk_id2_dense, "N/A", chunk, chunk2_dense, "N/A", question_type] + result_list + ["N/A"]
+        #                 # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
+        #                 if j == 5 and num_of_similar_chunks == 1:
+        #                     new_record = [pmid, pmid2_sparse, "N/A", chunk_id, chunk_id2_sparse, "N/A", chunk, chunk2_sparse, "N/A", question_type] + result_list + [key_words]
+        #                     new_record_dense = [pmid, pmid2_dense, "N/A", chunk_id, chunk_id2_dense, "N/A", chunk, chunk2_dense, "N/A", question_type] + result_list + ["N/A"]
 
-                        # 3 CHUNKS USED FOR COMPLEX QUESTION GENERATION
-                        if j == 5 and num_of_similar_chunks == 2:
-                            new_record = [pmid, pmid2_sparse, pmid3_sparse, chunk_id, chunk_id2_sparse, chunk_id3_sparse, chunk, chunk2_sparse, chunk3_sparse, question_type] + result_list + [key_words]
-                            new_record_dense = [pmid, pmid2_dense, pmid3_dense, chunk_id, chunk_id2_dense, chunk_id3_dense, chunk, chunk2_dense, chunk3_dense, question_type] + result_list + ["N/A"]
-                        #NORMAL QUESTIONS
-                        else:
-                            new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, "N/A", "N/A", question_type] + result_list + ["N/A"]
+        #                 # 3 CHUNKS USED FOR COMPLEX QUESTION GENERATION
+        #                 if j == 5 and num_of_similar_chunks == 2:
+        #                     new_record = [pmid, pmid2_sparse, pmid3_sparse, chunk_id, chunk_id2_sparse, chunk_id3_sparse, chunk, chunk2_sparse, chunk3_sparse, question_type] + result_list + [key_words]
+        #                     new_record_dense = [pmid, pmid2_dense, pmid3_dense, chunk_id, chunk_id2_dense, chunk_id3_dense, chunk, chunk2_dense, chunk3_dense, question_type] + result_list + ["N/A"]
+        #                 #NORMAL QUESTIONS
+        #                 else:
+        #                     new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, "N/A", "N/A", question_type] + result_list + ["N/A"]
 
-                        csv_writer.writerow(new_record)
-                        if j == 5 and prompt_dense:
-                            csv_writer.writerow(new_record_dense)
+        #                 csv_writer.writerow(new_record)
+        #                 if j == 5 and prompt_dense:
+        #                     csv_writer.writerow(new_record_dense)
                         
-                else:
-                    print("WARNING: NOT CORRECTLY GENERATED")
-                    # print(reply)
-                    continue
-            except (SyntaxError, ValueError):
-                print("WARNING: A LIST IS NOT GENERATED!")
-                # print(reply)
-                continue
-            # print(reply)
-        already_processed_documents.add(chunk_identifier)
+        #         else:
+        #             print("WARNING: NOT CORRECTLY GENERATED")
+        #             # print(reply)
+        #             continue
+        #     except (SyntaxError, ValueError):
+        #         print("WARNING: A LIST IS NOT GENERATED!")
+        #         # print(reply)
+        #         continue
+        #     # print(reply)
+        # already_processed_documents.add(chunk_identifier)
         # count += 1
 
 
