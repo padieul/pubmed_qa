@@ -31,8 +31,8 @@ def create_test_csv(file_path):
         # Create a CSV writer object with tab as the delimiter
         csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
 
-        header = ["pmid", "pmid2_sparse", "pmid3_sparse", "chunk_id", "", "chunk_id3_sparse", "chunk", "chunk2_sparse", "chunk3_sparse",
-        "question_type", "question", "answer", "keywords_if_complex"]
+        header = ["pmid", "pmid2", "pmid3", "chunk_id", "chunk_id2", "chunk_id3", "chunk", "chunk2", "chunk3",
+        "question_type", "question", "answer", "keywords_if_complex_and_sparse", "similarity_search", "generator_model"]
         csv_writer.writerow(header)
 
 
@@ -58,12 +58,42 @@ def get_useful_records(original_file_path):
     # so we decided on the size: minimum: 4 keywords and maximum: 6 keywords
     df_processed = df_processed[df_processed['key_words'].apply(lambda x: isinstance(x, list) and len(x) >= 4 and len(x) <= 6)]
 
-    df_processed.to_csv("data_preprocessing/data/processed_data_for_testing.csv", index=False)
+    df_processed.to_csv("data_preprocessing/data/processed_data_for_testing_500_100.csv", index=False)
 
     return
 
 
+def get_similar_chunk_attributes(result_of_similarity_search, pmid_original, chunk_id_original):
+    '''
+    This function is used to get the attributes of the similar chunks.
+    It takes the result of a similarity search and,  
+    the pmid and the chunk id of the chunk whose similar chunks should be returned.
+
+    It returns three lists that are;
+    1) list of similar chunks, 2) list of pmid's of those chunks, 3) chunk id's of those chunks
+    '''
+    similar_chunks = [] 
+    similar_chunks_pmids = []
+    similar_chunks_chunk_ids = []
+    for hit in result_of_similarity_search['hits']['hits']:
+        # id = hit['_id']
+        # score = hit['_score']
+        pmid_similar = hit['_source']['pmid']
+        chunk_id_similar = hit['_source']['chunk_id']  
+        if pmid_similar == pmid_original and chunk_id_similar == chunk_id_original: # if the found similar chunk is the chunk itself
+            # print("FOUND ITSELF") # this is for debugging purposes
+            continue
+                    
+        chunk_similar = hit['_source']['chunk']
+
+        similar_chunks.append(chunk_similar)
+        similar_chunks_pmids.append(pmid_similar)
+        similar_chunks_chunk_ids.append(chunk_id_similar)
+    return similar_chunks, similar_chunks_pmids, similar_chunks_chunk_ids
+
+
 def complex_from_llama2(prompt):
+    # DO SOMETHING HERE
     import replicate
     '''
     This function is used to generate complex questions by taking a prompt as an input
@@ -89,7 +119,6 @@ def complex_from_llama2(prompt):
 
     return [question, answer]
 
-
 # create_test_csv("data_preprocessing/test_data/test_dataset.csv") # To create the test set csv file - run only once
 
 # run only once to process the original data embeddings file and create a new one
@@ -97,19 +126,16 @@ def complex_from_llama2(prompt):
 
 # Here we store the chunks that we have already processed, in order not to use in the future
 df_already_processed_documents = pandas.read_csv("data_preprocessing/test_data/test_dataset.csv", usecols=["pmid", "chunk_id"], sep='\t')
-already_processed_documents= set(df_already_processed_documents['pmid'].astype(str) + '_' + df_already_processed_documents['chunk_id'].astype(str))
-print(already_processed_documents)
-
+already_processed_documents = set(df_already_processed_documents['pmid'].astype(str) + '_' + df_already_processed_documents['chunk_id'].astype(str))
 # print(already_processed_documents)
 
-df_data_embeddings = pandas.read_csv("data_preprocessing/data/processed_data_for_testing.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
-
+df_data_embeddings = pandas.read_csv("data_preprocessing/data/processed_data_for_testing_500_100.csv", usecols=['pmid', 'title', 'chunk_id', 'chunk', 'embedding', 'key_words'])
 # print(df_data_embeddings.head())
 # print(df_data_embeddings.shape)
 
 # Here we randomly take 100 data records to generate questions
 sampled_data_records = df_data_embeddings.sample(n=100)
-print(sampled_data_records)
+# print(sampled_data_records)
 
 
 # Here we randomly take 40 records from 100 selected
@@ -118,7 +144,7 @@ print(sampled_data_records)
 one_keyword_records = sampled_data_records.sample(n=40)
 
 # Dropping 40 records (that uses one keyword for similarity) from the original 100 selected records.
-sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
+# sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
 
 # Here we randomly take another 40 records from the remaining 60, initially selected records.
 # these chunks/records will use 2 keywords to find similar chunks to generate complex questions
@@ -152,8 +178,7 @@ count_for_three_keywords_two_chunks = 0 # 15
 #     api_key = "" # OpenAI api to be inserted here
 # )
 
-question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", 
-                  "Complex"] # 6 + 1 types
+question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", "Complex"] # 6 types
 
 
 prompts = ["You to generate a Yes/No question that require an understanding of a given context and deciding a \
@@ -172,7 +197,7 @@ the semantics of multiple text snippets, e.g. 'What cultural and historical fact
 Louvre Museum as a world-renowned art institution?' which requires inferring information from multiple documents to generate an answer."
 ]
 
-# print(prompts)
+# # print(prompts)
 
 # Here I concatenate all the data records but we know that 
 # first we have chunks that we will use one keyword to find its similar chunks,
@@ -181,74 +206,73 @@ Louvre Museum as a world-renowned art institution?' which requires inferring inf
 # Rows of these records are stacked on top of the other.
 all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
 
-# count = 0
 num_of_records = all_records.shape[0] # the number of samples we took 
 for i in range(num_of_records):
-    # if count == 100:
-    #     break
     pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]
     key_words = ast.literal_eval(key_words)
 
     # checking if we have already processed this chunk
     chunk_identifier = str(pmid) + '_' + str(chunk_id)
-    if chunk_identifier not in  already_processed_documents:
-        for j in range(6):
-            # time.sleep(30)
+    if chunk_identifier not in already_processed_documents:
+        for j in range(6): # for each chunk we try to generate all 6 types of questions
+#             # time.sleep(30)
             question_type = question_types[j]
 
-            # COMPLEX QUESTIONS
+#             # COMPLEX QUESTIONS
             if j == 5: # Complex question
                 # Here we find how many keywords we need to use to find similar chunks
                 # and also get the keywords to be used
                 
-                # After finding the keywords to be used
-                # we also find the number of the most similar chunks we are looking for
+                # BEFORE GENERATING THE QUESTION, WE NEED TO DECIDE ON SOME PARAMETERS;
+                # NUMBER OF KEYWORDS for sparse search
+                # NUMBER OF SIMILAR CHUNKS that we are looking for
 
                 # ONE KEYWORD SEARCH
-                if i < len(one_keyword_records): # we are still not done with one keyword seaches
-                    # one keywrod search
-                    keywords = key_words[0]
+                if i < len(one_keyword_records): # STILL NOT DONE WITH ONE KEYWORD SEARCH
+                    keywords = key_words[0] # GETTING ONLY ONE KEYWORD FOR OUR SEARCH
                     if count_for_one_keyword_two_chunks < 30: 
-                        # we have to find only the most similar chunks
+                        # ONLY THE MOST SIMILAR CHUNK
                         # because we agreed on finding one similar chunk for 30 of 40 records
                         num_of_similar_chunks = 1
                         count_for_one_keyword_two_chunks += 1
                     else:
-                        # otherwise we find two most similar chunks
+                        # otherwise we find TWO MOST SIMILAR CHUNKS
                         num_of_similar_chunks = 2
 
                 # TWO KEYWORDS SEARCH
-                elif i < len(one_keyword_records) + len(two_keywords_records): # we are still not done with two keywords searches
-                    # two keywords search
-                    keywords = key_words[0] + " " + key_words[1]
+                elif i < len(one_keyword_records) + len(two_keywords_records): # STILL NOT DONE WITH TWO KEYWORDS SEARCH
+                    keywords = key_words[0] + " " + key_words[1] # creating the QUERY OF KEYWORDS for our search
                     if count_for_two_keywords_two_chunks < 30: 
-                        # we have to find only the most similar chunks
+                        # ONLY THE MOST SIMILAR CHUNK
                         # because we agreed on finding one similar chunk for 30 of 40 records
                         num_of_similar_chunks = 1
                         count_for_two_keywords_two_chunks += 1
                     else:
+                        # TWO MOST SIMILAR CHUNKS
                         num_of_similar_chunks = 2
 
                 # THREE KEYWORDS SEARCH
                 else:
-                    # three keywords search
-                    keywords = key_words[0] + " " + key_words[1] + " " + key_words[2]
+                    # THREE KEYWORDS SEARCH
+                    keywords = key_words[0] + " " + key_words[1] + " " + key_words[2] # creating the QUERY OF KEYWORDS for our search
                     if count_for_three_keywords_two_chunks < 15:
-                        # we have to find only the most similar chunks
+                        # ONLY THE MOST SIMILAR CHUNK
                         # because we agreed on finding one similar chunk for 15 of 20 records
                         num_of_similar_chunks = 1
                         count_for_three_keywords_two_chunks += 1
                     else:
+                        # TWO MOST SIMILAR CHUNKS
                         num_of_similar_chunks = 2
                 
+                # print(keywords)
+
                 # NOW WE HAVE EVERYTHING TO FIND THE MOST SIMILAR CHUNK(S)
                 # WE HAVE THE KEYWORDS AND WE HAVE SIZE OF OUR SEARCH, MEANING HOW MANY SIMILAR CHUNKS ARE WE INTERESTED IN
                 
                 # WE NEED TO EXTRACT THE CHUNKS HERE
-                # print(keywords)
-                query_sparse = keywords
-                # print("KEYWORDS: ", keywords)
-
+                        
+                # SPARSE SEARCH
+                query_sparse = keywords 
                 size = num_of_similar_chunks + 1 # + 1 is because of the fact that the chunk itself may appear as one of the similar chunks
                 search_query_sparse = {
                     "query": {
@@ -261,8 +285,9 @@ for i in range(num_of_records):
 
                 results_sparse = client_OS.search(index="pubmed_500_100", body=search_query_sparse)
 
+                # DENSE SEARCH
                 # getting embedding of the query for dense search
-                query_embedding_dense = angle.encode({'text': chunk}) # maybe we can use the embedding as probably it's computed
+                query_embedding_dense = angle.encode({'text': chunk}) # maybe we can use the embedding as probably it's computed ??
 
                 search_query_dense = {    
                     "query": {
@@ -277,187 +302,153 @@ for i in range(num_of_records):
 
                 results_dense = client_OS.search(index="pubmed_500_100", body=search_query_dense)
 
-                similar_chunks_sparse = [] 
-                similar_chunks_pmids_sparse = []
-                similar_chunks_chunk_ids_sparse = []
-                for hit in results_sparse['hits']['hits']:
-                    # id = hit['_id']
-                    # score = hit['_score']
-                    pmid_similar_sparse = hit['_source']['pmid']
-                    chunk_id_similar_sparse = hit['_source']['chunk_id']  
-                    if pmid_similar_sparse == pmid and chunk_id_similar_sparse == chunk_id: # if the found similar chunk is the chunk itself
-                        print("FOUND ITSELF")
-                        continue
+                # similar_chunks_sparse, similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse = get_similar_chunk_attributes(results_sparse, pmid, chunk_id)
+                # similar_chunks_dense, similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense = get_similar_chunk_attributes(results_dense, pmid, chunk_id)
+
+
+#                 if len(similar_chunks_sparse) == 0: # NO SIMILAR CHUNK FOUND
+#                     # A COMPLEX QUESTION CANNOT BE FORMED!
+#                     print("NO SIMILAR CHUNK FOUND - SPARSE")
+#                     break
+                
+#                 if len(similar_chunks_dense) == 0:
+#                     print("NO SIMILAR CHUNK FOUND - DENSE")
+#                     break
+
+#                 elif num_of_similar_chunks == 1:
+#                     if len(similar_chunks_sparse) > 0:
+#                         pmid2_sparse = similar_chunks_pmids_sparse[0]
+#                         chunk2_sparse = similar_chunks_sparse[0]
+#                         chunk_id2_sparse = similar_chunks_chunk_ids_sparse[0]
+
+#                     if len(similar_chunks_dense) > 0: 
+#                         pmid2_dense = similar_chunks_pmids_dense[0]
+#                         chunk2_dense = similar_chunks_dense[0]
+#                         chunk_id2_dense = similar_chunks_chunk_ids_dense[0]
+                
+#                 elif num_of_similar_chunks == 2:
+#                     # print("3 CHUNKS!!!!!!")
+
+#                     if len(similar_chunks_sparse) > 1:
+#                         pmid3_sparse = similar_chunks_pmids_sparse[1]
+#                         chunk3_sparse = similar_chunks_sparse[1]
+#                         chunk_id3_sparse = similar_chunks_chunk_ids_sparse[1]
+
+#                     if len(similar_chunks_dense) > 1:
+#                         pmid3_dense = similar_chunks_pmids_dense[1]
+#                         chunk3_dense = similar_chunks_dense[1]
+#                         chunk_id3_dense = similar_chunks_chunk_ids_dense[1]
+
+
+
+#                 # ONE SIMILAR CHUNK
+#                 if num_of_similar_chunks == 1:
+#                     prompt_sparse = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+
+#                     prompt_dense = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+
+#                 # TWO SIMILAR CHUNKS
+#                 elif num_of_similar_chunks == 2:
+#                     prompt_sparse = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " The third text snippet is: " + chunk3_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
                     
-                    chunk_similar_sparse = hit['_source']['chunk']
+#                     prompt_dense = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " The third text snippet is: " + chunk3_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
 
-                    similar_chunks_sparse.append(chunk_similar_sparse)
-                    similar_chunks_pmids_sparse.append(pmid_similar_sparse)
-                    similar_chunks_chunk_ids_sparse.append(chunk_id_similar_sparse)
-                # print(similar_chunks_sparse)
+#                     # print(prompt)
+
+
+#             else:
+#                 prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
+# The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# DO NOT HALLUSINATE!!!"
+#             # print(question_type)
+#             # print(prompt)
+#             if prompt or prompt_sparse or prompt_dense:
+#                 if j == 5: # if complex then use llama
+#                     if prompt_sparse:
+#                         print(f"SPARSE: I:{i} J: {j}\n\n\n\n")
+#                         print(prompt_sparse)
+#                         print("\n\n\n\n")
+#                         # reply_complex_keyword = complex_from_llama2(prompt_sparse)
+#                     if prompt_dense:
+#                         print(f"DENSE: I:{i} J: {j}\n\n\n\n")
+#                         print(prompt_dense)
+#                         print("\n\n\n\n")
+#                         # reply_complex_vector = complex_from_llama2(prompt_dense) # add something
+
+#                 else: # else use gpt 3.5
+#                     # reply = "na"
+#                     print(f"I:{i} J: {j}")
+#                     print(prompt)
+#                     gpt_generated = True
+#                     chat_completion = client.chat.completions.create(
+#                         messages=[
+#                             {
+#                                 "role": "user",
+#                                 "content": prompt
+#                             }
+#                         ],
+#                         model="gpt-3.5-turbo-1106"
+#                     )
+#                     reply_gpt = chat_completion.choices[0].message.content
                 
-                # DENSE SEARCH RESULTS
-                similar_chunks_dense = [] 
-                similar_chunks_pmids_dense = []
-                similar_chunks_chunk_ids_dense = []
-                for hit in results_dense['hits']['hits']:
-                    # id = hit['_id']
-                    # score = hit['_score']
-                    pmid_similar_dense = hit['_source']['pmid']
-                    chunk_id_similar_dense = hit['_source']['chunk_id']  
-                    if pmid_similar_dense == pmid and chunk_id_similar_dense == chunk_id: # if the found similar chunk is the chunk itself
-                        print("FOUND ITSELF")
-                        continue
-                    
-                    chunk_similar_dense = hit['_source']['chunk']
+#                 if reply_gpt.lower == "na":
+#                     continue
+#             # print(reply)
+#         #     try:
+#         #         # Check if ChatGPT gave the response in a correct format
+#         #         result_list = ast.literal_eval(reply)
+#         #         if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
+#         #             # everything is good, we can add this to our dataset
+#         #             test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
 
-                    similar_chunks_dense.append(chunk_similar_dense)
-                    similar_chunks_pmids_dense.append(pmid_similar_dense)
-                    similar_chunks_chunk_ids_dense.append(chunk_id_similar_dense)
-
-
-                if len(similar_chunks_sparse) == 0: # NO SIMILAR CHUNK FOUND
-                    # A COMPLEX QUESTION CANNOT BE FORMED!
-                    print("NO SIMILAR CHUNK FOUND - SPARSE")
-                    break
-                
-                if len(similar_chunks_dense) == 0:
-                    print("NO SIMILAR CHUNK FOUND - DENSE")
-                    break
-
-                elif num_of_similar_chunks == 1:
-                    if len(similar_chunks_sparse) > 0:
-                        pmid2_sparse = similar_chunks_pmids_sparse[0]
-                        chunk2_sparse = similar_chunks_sparse[0]
-                        chunk_id2_sparse = similar_chunks_chunk_ids_sparse[0]
-
-                    if len(similar_chunks_dense) > 0: 
-                        pmid2_dense = similar_chunks_pmids_dense[0]
-                        chunk2_dense = similar_chunks_dense[0]
-                        chunk_id2_dense = similar_chunks_chunk_ids_dense[0]
-                
-                elif num_of_similar_chunks == 2:
-                    # print("3 CHUNKS!!!!!!")
-
-                    if len(similar_chunks_sparse) > 1:
-                        pmid3_sparse = similar_chunks_pmids_sparse[1]
-                        chunk3_sparse = similar_chunks_sparse[1]
-                        chunk_id3_sparse = similar_chunks_chunk_ids_sparse[1]
-
-                    if len(similar_chunks_dense) > 1:
-                        pmid3_dense = similar_chunks_pmids_dense[1]
-                        chunk3_dense = similar_chunks_dense[1]
-                        chunk_id3_dense = similar_chunks_chunk_ids_dense[1]
-
-
-
-                # ONE SIMILAR CHUNK
-                if num_of_similar_chunks == 1:
-                    prompt_sparse = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-                    prompt_dense = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-                # TWO SIMILAR CHUNKS
-                elif num_of_similar_chunks == 2:
-                    prompt_sparse = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " The third text snippet is: " + chunk3_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-                    
-                    prompt_dense = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " The third text snippet is: " + chunk3_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-                    # print(prompt)
-
-
-            else:
-                prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
-The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-DO NOT HALLUSINATE!!!"
-            # print(question_type)
-            # print(prompt)
-            if prompt or prompt_sparse or prompt_dense:
-                if j == 5: # if complex then use llama
-                    if prompt_sparse:
-                        print(f"SPARSE: I:{i} J: {j}\n\n\n\n")
-                        print(prompt_sparse)
-                        print("\n\n\n\n")
-                        # reply_complex_keyword = complex_from_llama2(prompt_sparse)
-                    if prompt_dense:
-                        print(f"DENSE: I:{i} J: {j}\n\n\n\n")
-                        print(prompt_dense)
-                        print("\n\n\n\n")
-                        # reply_complex_vector = complex_from_llama2(prompt_dense) # add something
-
-                else: # else use gpt 3.5
-                    # reply = "na"
-                    print(f"I:{i} J: {j}")
-                    print(prompt)
-                    # chat_completion = client.chat.completions.create(
-                    #     messages=[
-                    #         {
-                    #             "role": "user",
-                    #             "content": prompt
-                    #         }
-                    #     ],
-                    #     model="gpt-3.5-turbo-1106"
-                    # )
-                    # reply = chat_completion.choices[0].message.content
-                
-                # if reply.lower == "na":
-                #     continue
-            # print(reply)
-        #     try:
-        #         # Check if ChatGPT gave the response in a correct format
-        #         result_list = ast.literal_eval(reply)
-        #         if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
-        #             # everything is good, we can add this to our dataset
-        #             test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
-
-        #             with open(test_set_file_path, 'a', newline='') as file:
-        #                 csv_writer = csv.writer(file, delimiter='\t')
+#         #             with open(test_set_file_path, 'a', newline='') as file:
+#         #                 csv_writer = csv.writer(file, delimiter='\t')
                         
-        #                 # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
-        #                 if j == 5 and num_of_similar_chunks == 1:
-        #                     new_record = [pmid, pmid2_sparse, "N/A", chunk_id, chunk_id2_sparse, "N/A", chunk, chunk2_sparse, "N/A", question_type] + result_list + [key_words]
-        #                     new_record_dense = [pmid, pmid2_dense, "N/A", chunk_id, chunk_id2_dense, "N/A", chunk, chunk2_dense, "N/A", question_type] + result_list + ["N/A"]
+#         #                 # 2 CHUNKS USED FOR COMPLEX QUESTION GENERATION
+#         #                 if j == 5 and num_of_similar_chunks == 1:
+#         #                     new_record = [pmid, pmid2_sparse, "N/A", chunk_id, chunk_id2_sparse, "N/A", chunk, chunk2_sparse, "N/A", question_type] + result_list + [key_words]
+#         #                     new_record_dense = [pmid, pmid2_dense, "N/A", chunk_id, chunk_id2_dense, "N/A", chunk, chunk2_dense, "N/A", question_type] + result_list + ["N/A"]
 
-        #                 # 3 CHUNKS USED FOR COMPLEX QUESTION GENERATION
-        #                 if j == 5 and num_of_similar_chunks == 2:
-        #                     new_record = [pmid, pmid2_sparse, pmid3_sparse, chunk_id, chunk_id2_sparse, chunk_id3_sparse, chunk, chunk2_sparse, chunk3_sparse, question_type] + result_list + [key_words]
-        #                     new_record_dense = [pmid, pmid2_dense, pmid3_dense, chunk_id, chunk_id2_dense, chunk_id3_dense, chunk, chunk2_dense, chunk3_dense, question_type] + result_list + ["N/A"]
-        #                 #NORMAL QUESTIONS
-        #                 else:
-        #                     new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, "N/A", "N/A", question_type] + result_list + ["N/A"]
+#         #                 # 3 CHUNKS USED FOR COMPLEX QUESTION GENERATION
+#         #                 if j == 5 and num_of_similar_chunks == 2:
+#         #                     new_record = [pmid, pmid2_sparse, pmid3_sparse, chunk_id, chunk_id2_sparse, chunk_id3_sparse, chunk, chunk2_sparse, chunk3_sparse, question_type] + result_list + [key_words]
+#         #                     new_record_dense = [pmid, pmid2_dense, pmid3_dense, chunk_id, chunk_id2_dense, chunk_id3_dense, chunk, chunk2_dense, chunk3_dense, question_type] + result_list + ["N/A"]
+#         #                 #NORMAL QUESTIONS
+#         #                 else:
+#         #                     new_record = [pmid, "N/A", "N/A", chunk_id, "N/A", "N/A", chunk, "N/A", "N/A", question_type] + result_list + ["N/A"]
 
-        #                 csv_writer.writerow(new_record)
-        #                 if j == 5 and prompt_dense:
-        #                     csv_writer.writerow(new_record_dense)
+#         #                 csv_writer.writerow(new_record)
+#         #                 if j == 5 and prompt_dense:
+#         #                     csv_writer.writerow(new_record_dense)
                         
-        #         else:
-        #             print("WARNING: NOT CORRECTLY GENERATED")
-        #             # print(reply)
-        #             continue
-        #     except (SyntaxError, ValueError):
-        #         print("WARNING: A LIST IS NOT GENERATED!")
-        #         # print(reply)
-        #         continue
-        #     # print(reply)
-        # already_processed_documents.add(chunk_identifier)
-        # count += 1
+#         #         else:
+#         #             print("WARNING: NOT CORRECTLY GENERATED")
+#         #             # print(reply)
+#         #             continue
+#         #     except (SyntaxError, ValueError):
+#         #         print("WARNING: A LIST IS NOT GENERATED!")
+#         #         # print(reply)
+#         #         continue
+#         #     # print(reply)
+#         # already_processed_documents.add(chunk_identifier)
+#         # count += 1
 
 
