@@ -8,6 +8,7 @@
     1. [Data Chunking](#data-chunking)
     1. [Data Embedding](#data-embedding)
     1. [Data Storage](#data-storage)
+1. [Information Retrieval](#information-retrieval)
 1. [Evaluation Metrics](#evaluation-metrics)
 1. [Test Dataset Generation](#test-dataset-generation)
 
@@ -81,7 +82,7 @@ We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_em
 
 ### Data Storage
 
-To store the data with their embeddings in OpenSearch we created an index with k-NN enabled and we defined the data types mapping as in the snippet below. 
+To store the data with their embeddings in [`OpenSearch`](https://opensearch.org/) we created an index with k-NN enabled and we defined the data types mapping as in the snippet below. 
 
 ```yml
     index_mapping = {
@@ -131,6 +132,35 @@ To store the data with their embeddings in OpenSearch we created an index with k
 We used [`lucene`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) as an approximate k-NN library for indexing and search with the method [`hnsw`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) for k-NN approximation.
 
 > We created an alias for the vector field to keep using the default name `vector_field` in addition to the customized name we chose `embedding` because [`LangChain`](https://www.langchain.com/) libraries seem to recognize the default name only!
+
+
+## Information Retrieval
+
+All access to the [`OpenSearch`](https://opensearch.org/) backend is carried out through the [`LangChain`](https://www.langchain.com/) vector store interface [`OpenSearchVectorSearc`](https://api.python.langchain.com/en/v0.0.345/vectorstores/langchain.vectorstores.opensearch_vector_search.OpenSearchVectorSearch.html) in which we used [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) defined in `AnglEModel()` as an embedding function, we also used the default login credentials of [`OpenSearch`](https://opensearch.org/) and disabled any security related messages as they are relevant to our project.
+
+
+```Python
+from langchain_community.vectorstores import OpenSearchVectorSearch
+
+os_store = OpenSearchVectorSearch(
+    embedding_function=AnglEModel(),
+    index_name=index_name,
+    opensearch_url="https://opensearch:9200",
+    http_auth=("admin", "admin"),
+    use_ssl=False,
+    verify_certs=False,
+    ssl_assert_hostname=False,
+    ssl_show_warn=False,
+)
+```
+
+Before a vector store can be used by [`LangChain`](https://www.langchain.com/) in the RAG pipeline it has to be wrapped in a retriever object that defines the parameters to be used in the retrieval process such as the number of the top k documents to consider, the text and vector fields in [`OpenSearch`](https://opensearch.org/) index and whether you would like to apply any filters on the retrieved documents based on the meta data. 
+
+```Python
+retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk", "vector_field":"embedding"})
+```
+
+We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
 ## Evaluation Metrics
 
