@@ -63,7 +63,7 @@ def get_useful_records(original_file_path):
     return
 
 
-def get_similar_chunk_attributes(result_of_similarity_search, pmid_original, chunk_id_original):
+def get_similar_chunks(result_of_similarity_search, pmid_original, chunk_id_original):
     '''
     This function is used to get the attributes of the similar chunks.
     It takes the result of a similarity search and,  
@@ -90,6 +90,37 @@ def get_similar_chunk_attributes(result_of_similarity_search, pmid_original, chu
         similar_chunks_pmids.append(pmid_similar)
         similar_chunks_chunk_ids.append(chunk_id_similar)
     return similar_chunks, similar_chunks_pmids, similar_chunks_chunk_ids
+
+def get_attributes_for_most_similar(similar_chunks_pmids, similar_chunks_chunk_ids, similar_chunks):
+    '''
+    This function takes the pmid's, chunk id's and chunks of the most similar chunks
+    It is used to assign the values for the attributes of the most similar chunk.
+    Those attributes are pmid, chunk id and chunk.
+    This function is only used in the case of taking the most similar chunk
+    '''
+
+    pmid2 = similar_chunks_pmids[0]
+    chunk_id2 = similar_chunks_chunk_ids[0]
+    chunk2 = similar_chunks[0]
+    return pmid2, chunk_id2, chunk2
+
+
+def get_attributes_for_two_most_similar(similar_chunks_pmids, similar_chunks_chunk_ids, similar_chunks):
+    '''
+    This function takes the pmid's, chunk id's and chunks of the two most similar chunks
+    It is used to assign the values for the attributes of the most similar chunk.
+    Those attributes are pmid's, chunk id's and chunks.
+    This function is only used in the case of taking the most two similar chunk
+    '''
+
+    pmid2 = similar_chunks_pmids[0]
+    pmid3 = similar_chunks_pmids[1]
+    chunk_id2 = similar_chunks_chunk_ids[0]
+    chunk_id3 = similar_chunks_chunk_ids[1]
+    chunk2 = similar_chunks[0]
+    chunk3 = similar_chunks[1]
+
+    return pmid2, pmid3, chunk_id2, chunk_id3, chunk2, chunk3
 
 
 def complex_from_llama2(prompt):
@@ -302,42 +333,35 @@ for i in range(num_of_records):
 
                 results_dense = client_OS.search(index="pubmed_500_100", body=search_query_dense)
 
-                # similar_chunks_sparse, similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse = get_similar_chunk_attributes(results_sparse, pmid, chunk_id)
-                # similar_chunks_dense, similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense = get_similar_chunk_attributes(results_dense, pmid, chunk_id)
+                similar_chunks_sparse, similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse = get_similar_chunks(results_sparse, pmid, chunk_id)
+                similar_chunks_dense, similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense = get_similar_chunks(results_dense, pmid, chunk_id)
 
 
-#                 if len(similar_chunks_sparse) == 0: # NO SIMILAR CHUNK FOUND
-#                     # A COMPLEX QUESTION CANNOT BE FORMED!
-#                     print("NO SIMILAR CHUNK FOUND - SPARSE")
-#                     break
+                if len(similar_chunks_sparse) == 0: # NO SIMILAR CHUNK FOUND FROM SPARSE
+                    # A COMPLEX QUESTION CANNOT BE FORMED!
+                    # print("NO SIMILAR CHUNK FOUND - SPARSE")
+                    break
                 
-#                 if len(similar_chunks_dense) == 0:
-#                     print("NO SIMILAR CHUNK FOUND - DENSE")
-#                     break
+                if len(similar_chunks_dense) == 0: # NO SIMILAR CHUNK FOUND FROM DENSE
+                    # print("NO SIMILAR CHUNK FOUND - DENSE")
+                    break
 
-#                 elif num_of_similar_chunks == 1:
-#                     if len(similar_chunks_sparse) > 0:
-#                         pmid2_sparse = similar_chunks_pmids_sparse[0]
-#                         chunk2_sparse = similar_chunks_sparse[0]
-#                         chunk_id2_sparse = similar_chunks_chunk_ids_sparse[0]
+                if num_of_similar_chunks == 1: # LOOKING FOR THE MOST SIMILAR CHUNK
+                    if len(similar_chunks_sparse) > 0: # THE MOST SIMILAR FROM SPARSE IF AVAILABLE
+                        pmid2_sparse, chunk_id2_sparse, chunk2_sparse = get_attributes_for_most_similar(similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse, similar_chunks_sparse)
 
-#                     if len(similar_chunks_dense) > 0: 
-#                         pmid2_dense = similar_chunks_pmids_dense[0]
-#                         chunk2_dense = similar_chunks_dense[0]
-#                         chunk_id2_dense = similar_chunks_chunk_ids_dense[0]
+
+                    if len(similar_chunks_dense) > 0: # THE MOST SIMILAR FROM DENSE IF AVAILABLE
+                        pmid2_dense, chunk_id2_dense, chunk2_dense = get_attributes_for_most_similar(similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense, similar_chunks_dense)
+
                 
-#                 elif num_of_similar_chunks == 2:
-#                     # print("3 CHUNKS!!!!!!")
+                if num_of_similar_chunks == 2: # LOOKING FOR THE MOST TWO SIMILAR CHUNKS
+                    if len(similar_chunks_sparse) > 1:
+                        pmid2_sparse, pmid3_sparse, chunk_id2_sparse, chunk_id3_sparse, chunk2_sparse, chunk3_sparse = get_attributes_for_two_most_similar(similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse, similar_chunks_sparse)
 
-#                     if len(similar_chunks_sparse) > 1:
-#                         pmid3_sparse = similar_chunks_pmids_sparse[1]
-#                         chunk3_sparse = similar_chunks_sparse[1]
-#                         chunk_id3_sparse = similar_chunks_chunk_ids_sparse[1]
-
-#                     if len(similar_chunks_dense) > 1:
-#                         pmid3_dense = similar_chunks_pmids_dense[1]
-#                         chunk3_dense = similar_chunks_dense[1]
-#                         chunk_id3_dense = similar_chunks_chunk_ids_dense[1]
+                    if len(similar_chunks_dense) > 1:
+                        pmid2_dense, pmid3_dense, chunk_id2_dense, chunk_id3_dense, chunk2_dense, chunk3_dense = get_attributes_for_two_most_similar(similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense, similar_chunks_dense)
+       
 
 
 
