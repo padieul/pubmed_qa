@@ -26,13 +26,17 @@ client_OS= OpenSearch(
     ssl_show_warn = False,
 )
 
+client_OpenAI = OpenAI(
+    api_key = "" # OpenAI api to be inserted here
+)
+
 def create_test_csv(file_path):
     with open(file_path, 'w', newline='') as file:
         # Create a CSV writer object with tab as the delimiter
         csv_writer = csv.writer(file, delimiter='\t')  # Specify tab as the delimiter
 
         header = ["pmid", "pmid2", "pmid3", "chunk_id", "chunk_id2", "chunk_id3", "chunk", "chunk2", "chunk3",
-        "question_type", "question", "answer", "keywords_if_complex_and_sparse", "similarity_search", "generator_model"]
+        "question_type", "question", "answer", "similarity_search", "keywords_if_complex_and_sparse", "generator_model", " warning_while_generation"]
         csv_writer.writerow(header)
 
 
@@ -123,6 +127,24 @@ def get_attributes_for_two_most_similar(similar_chunks_pmids, similar_chunks_chu
     return pmid2, pmid3, chunk_id2, chunk_id3, chunk2, chunk3
 
 
+def gpt_3_5_turbo(prompt):
+    '''
+
+    '''
+    time.sleep(30) # sleep each time before sending any prompt to gpt
+    chat_completion = client_OpenAI.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        model="gpt-3.5-turbo-1106"
+    )
+    reply = chat_completion.choices[0].message.content
+    return reply
+
+
 def complex_from_llama2(prompt):
     # DO SOMETHING HERE
     import replicate
@@ -141,14 +163,82 @@ def complex_from_llama2(prompt):
 
     output = "".join(output)
 
-    question_start = output.find("Question:")
-    answer_start = output.find("Answer:")
+    question_start = output.lower().find("question:")
+    answer_start = output.find("answer:")
 
-    question = output[question_start + len("Question:"):answer_start].strip()
-    answer = output[answer_start + len("Answer:"):].strip()
+    question = output[question_start + len("question:"):answer_start].strip()
+    answer = output[answer_start + len("answer:"):].strip()
     print("YESSSS!!!!")
 
     return [question, answer]
+
+
+def write_to_test_set(pmid, pmid2, pmid3, 
+                      chunk_id, chunk_id2, chunk_id3,
+                      chunk, chunk2, chunk3,
+                      question_type, reply, similarity_search, keywords_if_complex_and_sparse, generator_model):
+    '''
+    This function is used to check the validity of the reply by the generator model,
+        if necessary change the format of the reply,
+        and write the new record to the testing set
+    '''
+    # pmid pmid2 pmid3 chunk_id chunk_id2 chunk_id3 chunk chunk2 chunk3 question_type question answer 
+    # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
+    try:
+        # Check if the model gave the response in a correct format
+        
+        result_list = ast.literal_eval(reply)
+        if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
+            # everything is good, we can add this to our dataset
+            warning_while_generation = "N/A"
+            test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
+
+            with open(test_set_file_path, 'a', newline='') as file:
+                csv_writer = csv.writer(file, delimiter='\t')
+                        
+                new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+                csv_writer.writerow(new_record)
+                        
+        else:
+            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+
+            # writing the warning to a txt file
+            with open("data_preprocessing/test_data/warnings.txt", 'w') as file:
+                file.write(warning_while_generation)
+            
+    except (SyntaxError, ValueError):
+        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
+        
+        reply = "".join(reply) # some 
+        question_start = reply.lower().find("question:")
+        answer_start = reply.find("answer:")
+
+        question = reply[question_start + len("question:"):answer_start].strip()
+        answer = reply[answer_start + len("answer:"):].strip()
+
+        reformatted_reply = [question, answer] # reformatted reply
+
+        print(reformatted_reply)
+
+        test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
+
+        with open(test_set_file_path, 'a', newline='') as file:
+            csv_writer = csv.writer(file, delimiter='\t')
+                        
+            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reformatted_reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+            csv_writer.writerow(new_record)
+
+        warning_while_generation += f"\nReformatted Reply: {reformatted_reply}\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+        with open("data_preprocessing/test_data/warnings.txt", 'w') as file:
+                file.write(warning_while_generation)
+
+            
+    return
 
 # create_test_csv("data_preprocessing/test_data/test_dataset.csv") # To create the test set csv file - run only once
 
@@ -205,10 +295,6 @@ count_for_two_keywords_two_chunks = 0 # 30
 count_for_three_keywords_two_chunks = 0 # 15
 
 
-# client = OpenAI(
-#     api_key = "" # OpenAI api to be inserted here
-# )
-
 question_types = ["Confirmation", "Factoid-type", "List-type", "Causal", "Hypothetical", "Complex"] # 6 types
 
 
@@ -246,11 +332,10 @@ for i in range(num_of_records):
     chunk_identifier = str(pmid) + '_' + str(chunk_id)
     if chunk_identifier not in already_processed_documents:
         for j in range(6): # for each chunk we try to generate all 6 types of questions
-#             # time.sleep(30)
             question_type = question_types[j]
 
-#             # COMPLEX QUESTIONS
-            if j == 5: # Complex question
+            # COMPLEX QUESTIONS
+            if question_type == "Complex": # Complex question
                 # Here we find how many keywords we need to use to find similar chunks
                 # and also get the keywords to be used
                 
@@ -345,66 +430,58 @@ for i in range(num_of_records):
                 if len(similar_chunks_dense) == 0: # NO SIMILAR CHUNK FOUND FROM DENSE
                     # print("NO SIMILAR CHUNK FOUND - DENSE")
                     break
-
+                
                 if num_of_similar_chunks == 1: # LOOKING FOR THE MOST SIMILAR CHUNK
                     if len(similar_chunks_sparse) > 0: # THE MOST SIMILAR FROM SPARSE IF AVAILABLE
                         pmid2_sparse, chunk_id2_sparse, chunk2_sparse = get_attributes_for_most_similar(similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse, similar_chunks_sparse)
+                        
+                        prompt_sparse = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
 
 
                     if len(similar_chunks_dense) > 0: # THE MOST SIMILAR FROM DENSE IF AVAILABLE
                         pmid2_dense, chunk_id2_dense, chunk2_dense = get_attributes_for_most_similar(similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense, similar_chunks_dense)
+                        
+                        prompt_dense = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
 
-                
-                if num_of_similar_chunks == 2: # LOOKING FOR THE MOST TWO SIMILAR CHUNKS
+                elif num_of_similar_chunks == 2: # LOOKING FOR THE MOST TWO SIMILAR CHUNKS
                     if len(similar_chunks_sparse) > 1:
                         pmid2_sparse, pmid3_sparse, chunk_id2_sparse, chunk_id3_sparse, chunk2_sparse, chunk3_sparse = get_attributes_for_two_most_similar(similar_chunks_pmids_sparse, similar_chunks_chunk_ids_sparse, similar_chunks_sparse)
+                        
+                        prompt_sparse = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " The third text snippet is: " + chunk3_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
 
                     if len(similar_chunks_dense) > 1:
                         pmid2_dense, pmid3_dense, chunk_id2_dense, chunk_id3_dense, chunk2_dense, chunk3_dense = get_attributes_for_two_most_similar(similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense, similar_chunks_dense)
-       
+                        
+                        prompt_dense = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " The third text snippet is: " + chunk3_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
 
 
+            else:
+                prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
+The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+DO NOT HALLUSINATE!!!"
 
-#                 # ONE SIMILAR CHUNK
-#                 if num_of_similar_chunks == 1:
-#                     prompt_sparse = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-#                     prompt_dense = prompts[j] + "You need to use the given 2 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-#                 # TWO SIMILAR CHUNKS
-#                 elif num_of_similar_chunks == 2:
-#                     prompt_sparse = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_sparse + " The third text snippet is: " + chunk3_sparse + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-                    
-#                     prompt_dense = prompts[j] + "You need to use the given 3 different text snippets to generate the question!!. You also need to generate an answer for your question. \
-# The first text snippet is: " + chunk + " The second text snippet is: " + chunk2_dense + " The third text snippet is: " + chunk3_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-# IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
-
-#                     # print(prompt)
-
-
-#             else:
-#                 prompt = prompts[j] + "You need to use the given chunk of text to generate the question!!. You also need to generate an answer for your question. \
-# The text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-# DO NOT HALLUSINATE!!!"
-#             # print(question_type)
-#             # print(prompt)
-#             if prompt or prompt_sparse or prompt_dense:
+            # print(question_type)
+            # print(prompt)
+            
+            if prompt or prompt_sparse or prompt_dense:
 #                 if j == 5: # if complex then use llama
 #                     if prompt_sparse:
 #                         print(f"SPARSE: I:{i} J: {j}\n\n\n\n")
@@ -422,16 +499,8 @@ for i in range(num_of_records):
 #                     print(f"I:{i} J: {j}")
 #                     print(prompt)
 #                     gpt_generated = True
-#                     chat_completion = client.chat.completions.create(
-#                         messages=[
-#                             {
-#                                 "role": "user",
-#                                 "content": prompt
-#                             }
-#                         ],
-#                         model="gpt-3.5-turbo-1106"
-#                     )
-#                     reply_gpt = chat_completion.choices[0].message.content
+
+                    reply_gpt = gpt_3_5_turbo(prompt)
                 
 #                 if reply_gpt.lower == "na":
 #                     continue
