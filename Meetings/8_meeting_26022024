@@ -1,0 +1,15 @@
+###  8. Meeting (26.02.2024) Notes:
+
+Still left to do: 
+- add filtering of retrieval by metadata (years, authors, keywords)
+
+- update the front-end from node.js to svelte
+- add additional formatting for the references in the QAs systems answer
+
+- extend testing data set generatio with gui for manual test data cleaning 
+  and quality control (make sure that all question types are present)
+
+- add readme.md sections for the remaining things
+
+
+
