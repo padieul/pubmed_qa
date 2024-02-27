@@ -30,11 +30,11 @@ client_OS= OpenSearch(
 )
 
 client_OpenAI = OpenAI(
-    api_key = "OpenAI API TOKEN TO BE INSERTED HERE"
+    api_key = "" # OpenAI API TOKEN TO BE INSERTED HERE
 )
 
 
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "API TOKEN TO BE INSERTED HERE"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "" # HUGGINGFACEHUB API TOKEN TO BE INSERTED HERE
 
 repo_id = "tiiuae/falcon-7b-instruct" 
 
@@ -181,13 +181,19 @@ def write_to_test_set(pmid, pmid2, pmid3,
     # pmid pmid2 pmid3 chunk_id chunk_id2 chunk_id3 chunk chunk2 chunk3 question_type question answer 
     # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
 
-    if reply.lower == "na":
+    if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
+        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n \
+Original Reply: '{reply}'\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+            
+        # writing the warning to a txt file
+        with open("data_preprocessing/test_data/warnings.txt", 'a') as file:
+            file.write(warning_while_generation)
         return
     try:
         # Check if the model gave the response in a correct format
         
-        result_list = ast.literal_eval(reply)
-        if isinstance(result_list, list) and all(isinstance(item, str) for item in result_list):
+        reply_list = ast.literal_eval(reply)
+        if isinstance(reply_list, list) and all(isinstance(item, str) for item in reply_list):
             # everything is good, we can add this to our dataset
             warning_while_generation = "N/A"
             test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
@@ -196,19 +202,19 @@ def write_to_test_set(pmid, pmid2, pmid3,
                 csv_writer = csv.writer(file, delimiter='\t')
                         
                 new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
-                              question_type] + reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                              question_type] + reply_list + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
                 
                 csv_writer.writerow(new_record)
                         
         else:
             warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
-THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n"
 
             # writing the warning to a txt file
-            with open("data_preprocessing/test_data/warnings.txt", 'w') as file:
+            with open("data_preprocessing/test_data/warnings.txt", 'a') as file:
                 file.write(warning_while_generation)
             
-    except (SyntaxError, ValueError):
+    except (SyntaxError, ValueError):        
         warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
         
         reply = "".join(reply) # some 
@@ -220,8 +226,6 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:{pmid}, CHUNK ID: {chun
 
         reformatted_reply = [question, answer] # reformatted reply
 
-        print(reformatted_reply)
-
         test_set_file_path = 'data_preprocessing/test_data/test_dataset.csv'
 
         with open(test_set_file_path, 'a', newline='') as file:
@@ -232,8 +236,8 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:{pmid}, CHUNK ID: {chun
                 
             csv_writer.writerow(new_record)
 
-        warning_while_generation += f"\nReformatted Reply: {reformatted_reply}\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
-        with open("data_preprocessing/test_data/warnings.txt", 'w') as file:
+        warning_while_generation += f"\nOriginal Reply: '{reply}'\nReformatted Reply: '{reformatted_reply}'\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+        with open("data_preprocessing/test_data/warnings.txt", 'a') as file:
                 file.write(warning_while_generation)
 
             
@@ -454,20 +458,37 @@ IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DO
                     if len(similar_chunks_dense) > 1:
                         pmid2_dense, pmid3_dense, chunk_id2_dense, chunk_id3_dense, chunk2_dense, chunk3_dense = get_attributes_for_two_most_similar(similar_chunks_pmids_dense, similar_chunks_chunk_ids_dense, similar_chunks_dense)
                         
+                        # MADE SOME CHANGES TO THIS PROMPT - CONSIDER THISS!!!!!!
                         prompt_dense = prompts[j] + "You need to use the 3 different given text snippets to generate the question!!. You also need to generate an answer for your question. \
 The first given text snippet is: " + chunk + " The second given text snippet is: " + chunk2_dense + " The third given text snippet is: " + chunk3_dense + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
 just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-IF YOU ALSO THING THAT GENERATING A QUESTION FROM THESE 2 GIVEN TEXT SNIPPETS DOES NOT MAKE SENSE JUST TELL ME 'NA' AGAIN!! DO NOT HALLUSINATE!!!"
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER."
+
+                        # use the model to generate question and answer pair
+                        reply_gpt = gpt_3_5_turbo(prompt_dense)
+
+                        # write the generated record to the test set
+                        write_to_test_set(pmid, pmid2_dense, pmid3_dense, 
+                                          chunk_id, chunk_id2_dense, chunk_id3_dense,
+                                          chunk, chunk2_dense, chunk3_dense,
+                                          question_type, reply_gpt, "Dense", "N/A", "gpt-3.5-turbo-1106")
 
 
-            else:
-                prompt = prompts[j] + "You need to use the given text snippet to generate the question!!. You also need to generate an answer for your question. \
-The given text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
-just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
-IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
-DO NOT HALLUSINATE!!!"
-                # print(prompt)
+#             else:
+#                 prompt = prompts[j] + "You need to use the given text snippet to generate the question!!. You also need to generate an answer for your question. \
+# The given text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+# just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+# IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'.\
+# DO NOT HALLUSINATE!!!"
+
+#                 # use the model to generate question and answer pair
+#                 reply_gpt = gpt_3_5_turbo(prompt)
+
+#                 # write the generated record to the test set
+#                 write_to_test_set(pmid, "N/A", "N/A", 
+#                       chunk_id, "N/A", "N/A",
+#                       chunk, "N/A", "N/A",
+#                       question_type, reply_gpt, "N/A", "N/A", "gpt-3.5-turbo-1106")
 
             # print(question_type)
             # print(prompt)
