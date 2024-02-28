@@ -22,7 +22,7 @@ auth = ('admin', 'admin')
 
 # Create the client with SSL/TLS enabled and disable warnings
 client_OS= OpenSearch(
-    hosts = [{'host': host, 'port': port}],
+    hosts = [{'host': host, 'port': port}],    
     http_auth = auth,
     use_ssl = True,
     verify_certs = False,
@@ -182,8 +182,8 @@ def write_to_test_set(pmid, pmid2, pmid3,
     # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
 
     if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
-        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n \
-Original Reply: '{reply}'\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+        warning_while_generation = f"\n\n\n\nWARNING: GENERATED TEXT IS 'N/A'\n\n \
+Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}"
             
         # writing the warning to a txt file
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
@@ -207,15 +207,15 @@ Original Reply: '{reply}'\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {qu
                 csv_writer.writerow(new_record)
                         
         else:
-            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
-THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n"
+            warning_while_generation = f"\n\n\n\nWARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'"
 
             # writing the warning to a txt file
             with open("data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv", 'a') as file:
                 file.write(warning_while_generation)
             
     except (SyntaxError, ValueError):        
-        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
+        warning_while_generation = f"\n\n\n\nWARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
         
         reply = "".join(reply) # some 
         question_start = reply.lower().find("question:")
@@ -236,7 +236,7 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\nPMID:'{pmid}', CHUNK ID: '{c
                 
             csv_writer.writerow(new_record)
 
-        warning_while_generation += f"\nOriginal Reply: '{reply}'\nReformatted Reply: '{reformatted_reply}'\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n"
+        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}"
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
                 file.write(warning_while_generation)
 
