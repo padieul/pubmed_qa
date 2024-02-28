@@ -5,11 +5,21 @@
 1. [Overview](#overview)
 1. [Data Preparation](#data-preparation)
     1. [Data Collection](#data-collection)
+    1. [Data Chunking](#data-chunking)
+    1. [Data Embedding](#data-embedding)
+    1. [Data Storage](#data-storage)
+1. [Information Retrieval](#information-retrieval)
 1. [Evaluation Metrics](#evaluation-metrics)
 1. [Test Dataset Generation](#test-dataset-generation)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>.
+
+The architecture of the project consists of four components that are containerized in Docker containers and interconnected using Docker internal network that is also accessible using the local host computer. The four components are as follows:
+
+- Front-end web interface to receive user queries
+- Middleware powered by FastAPI to retrieve the documents from OpenSearch, filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
+- OpenSearch for document and vector storage, indexing and retrieval
 
 
 ## Data Preparation
@@ -50,6 +60,107 @@ For chunking, we used `RecursiveCharacterTextSplitter` in [`LangChain`](https://
 ```
 
 The chunking is done using the script [`data_chunking_v2.py`](data_preprocessing/data_chunking_v2.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
+
+### Data Embedding
+
+We chose the [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) as our embedding model because it is listed 6th on the [`MTEB Leaderboard`](https://huggingface.co/spaces/mteb/leaderboard) with a retrieval performance close to a much larger models. The size of this model is just 1.34 GB which make it suitable to run locally without the need for any subscription or remote API calls. The model provides two separate embedding options, a standard option to embed the document to be retrieved and a customized option that is augmented with a prompt to generate a query embedding that is more appropriate for retrieval tasks. 
+
+```Python
+from angle_emb import AnglE
+
+# Document embedding
+angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+vec = angle.encode('hello world', to_numpy=True)
+
+# Query embedding
+angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+angle.set_prompt(prompt=Prompts.C)
+vec = angle.encode({'text': 'hello world'}, to_numpy=True)
+```
+
+We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
+
+### Data Storage
+
+To store the data with their embeddings in [`OpenSearch`](https://opensearch.org/) we created an index with k-NN enabled and we defined the data types mapping as in the snippet below. 
+
+```yml
+    index_mapping = {
+        "settings": {
+            "index": {
+            "knn": True,
+            "knn.algo_param.ef_search": 100
+            }
+        },
+        "mappings": {
+            "properties": {
+                "pmid": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "text"
+                },
+                "chunk_id": {
+                    "type": "integer"
+                },
+                "chunk": {
+                    "type": "text"
+                },
+                "year": {
+                    "type": "integer"
+                },
+                "month": {
+                    "type": "integer"
+                },
+                "embedding": {
+                    "type": "knn_vector",
+                    "dimension": 1024,
+                    "method": {
+                        "name": "hnsw",
+                        "engine": "lucene"
+                    }                
+                },
+                "vector_field": {
+                    "type": "alias",
+                    "path" : "embedding"
+                }
+            }
+        }
+    }
+```
+
+We used [`lucene`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) as an approximate k-NN library for indexing and search with the method [`hnsw`](https://opensearch.org/docs/latest/search-plugins/knn/knn-index/) for k-NN approximation.
+
+> We created an alias for the vector field to keep using the default name `vector_field` in addition to the customized name we chose `embedding` because [`LangChain`](https://www.langchain.com/) libraries seem to recognize the default name only!
+
+
+## Information Retrieval
+
+All access to the [`OpenSearch`](https://opensearch.org/) backend is carried out through the [`LangChain`](https://www.langchain.com/) vector store interface [`OpenSearchVectorSearc`](https://api.python.langchain.com/en/v0.0.345/vectorstores/langchain.vectorstores.opensearch_vector_search.OpenSearchVectorSearch.html) in which we used [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) defined in `AnglEModel()` as an embedding function, we also used the default login credentials of [`OpenSearch`](https://opensearch.org/) and disabled any security related messages as they are relevant to our project.
+
+
+```Python
+from langchain_community.vectorstores import OpenSearchVectorSearch
+
+os_store = OpenSearchVectorSearch(
+    embedding_function=AnglEModel(),
+    index_name=index_name,
+    opensearch_url="https://opensearch:9200",
+    http_auth=("admin", "admin"),
+    use_ssl=False,
+    verify_certs=False,
+    ssl_assert_hostname=False,
+    ssl_show_warn=False,
+)
+```
+
+Before a vector store can be used by [`LangChain`](https://www.langchain.com/) in the RAG pipeline it has to be wrapped in a retriever object that defines the parameters to be used in the retrieval process such as the number of the top k documents to consider, the text and vector fields in [`OpenSearch`](https://opensearch.org/) index and whether you would like to apply any filters on the retrieved documents based on the meta data. 
+
+```Python
+retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk", "vector_field":"embedding"})
+```
+
+We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
 ## Evaluation Metrics
 
@@ -105,11 +216,41 @@ Reference text = "Students enjoy doing homeworks"
     6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
 
     Question Generation Process:
-    We use the available abstacts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract. One of 5 prompts for each question type is used along with a given abstract to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
-    Here is our prompt: 
+    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available 
+    [api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.]
+    One of 6 prompts for each question type is used along with a given chunks (chunks in the case of complex questions) to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
 
-    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + abstract + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
+    For complex questions, we find one or two most similar chunks to the given chunk. 
+    We find the most similar chunk(s) as following:
+    Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
+    We divide the sample into 3 parts with the sizes of 40, 40, 20. 
+    1) In the first 40 records, we do sparse search with just one keyword.
+    2) In the second part that has 40 records, we do the sparse search with two keywords.
+    3) In the final part that has 20 records, we do the sparse search with three keywords.
+
+    When we do the dense search for similar chunks, we do not use keywords, but we use the embedding of the chunk to find similar chunks.
+    We do the dense search right after we do the sparse search in our iteration over the records. So we go through the same samples of sizes of 40, 40, 20. 
+    In the first part of the sample that has 40 records. In the first 30 of those records (75%) we look for the most similar chunk. That applies to both sparse and dense searches. 
     
+    Althoug we are looking for the most similar chunk, here we do the search with the size of 2. 
+    That is because of the fact that it is perfectly possible to get the chunk itself while we are searching for its similars. If it is the case, we do not consider the chunk itself. If it is not, we take the most similar not considering the remaining similars.
+    
+    In the remaining part of these records - the remaining 10 (25%), we are search for the two most similar chunks. Similarly, making the search size 3 because of the possibility of getting the chunk itself as its similar.
+
+    That is the same for the remaining two part of the whole sample with the sizes of 40, 20, respectively. We do the search for the most similar chunk for the 75% of the part, and do search for the two most similar chunks for the 25% of the part. 
+
+    The whole idea of dividing the sample to 3 parts with 40, 40, 20 records, respectively is to get similar chunks with a specific number of keywords (1 keyword, 2 keywords, 3 keywords). That is only for the sparse search and has not effect on dense search. 
+
+    [CONTINUE THE WORK FROM HERE!!]
+    Sparse Search: We take 
+    
+    Here is our prompt [for questions other than complex questions]: 
+
+    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
+    
+    Here is our prompt(s) [for complex questions with 2 chunks - a chunk and its most similar chunk]
+
+
     In this scenario, prompts[i] is a prompt specific to the question type. Those prompts can be found below:
 
     prompts = [

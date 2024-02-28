@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils import llm_model, opensearch_vector_store
+from utils import llm_model, opensearch_vector_store, build_references, processed_output
 from config import set_api_keys
 from langchain.chains import RetrievalQA
 from langchain import hub
@@ -14,10 +14,10 @@ llm = llm_model()
 
 # Initialize OpenSearch vector and store and retriever
 vector_store = opensearch_vector_store(index_name="pubmed_500_100")
-retriever = vector_store.as_retriever(search_kwargs={"k": 10})
+retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk", "vector_field":"embedding"})
 
-# Adding a RAG prompt from langChain
-prompt = hub.pull("rlm/rag-prompt")
+# Loads the latest version of RAG prompt
+prompt = hub.pull("rlm/rag-prompt", api_url="https://api.hub.langchain.com")
 
 # Initialize langChain RAG pipeline
 rag_pipeline = RetrievalQA.from_chain_type(
@@ -25,8 +25,8 @@ rag_pipeline = RetrievalQA.from_chain_type(
     chain_type="stuff",
     retriever=retriever,
     return_source_documents=True,
-    chain_type_kwargs={"prompt": prompt},
-    verbose=True,
+    chain_type_kwargs={"prompt": prompt, "verbose":"True"},
+    verbose=True    
 )
 
 
@@ -52,12 +52,15 @@ def read_root(message: str):
 
 
 @app.get("/retrieve_documents_dense")
-def retrieve_documents(query_str: str):
+async def retrieve_documents(query_str: str):
     """
     A complete end-to-end RAG to answer user questions
     """
-    answer = rag_pipeline({"query": query_str})
-    return {"message": answer["result"]}
+    answer = rag_pipeline.invoke({"query": query_str})    
+
+    output = processed_output(answer["result"])
+    
+    return {"message": output + "\n\n" + build_references(answer["source_documents"])}
 
 
 @app.get("/retrieve_documents_sparse")
