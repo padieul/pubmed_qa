@@ -182,8 +182,8 @@ def write_to_test_set(pmid, pmid2, pmid3,
     # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
 
     if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
-        warning_while_generation = f"\n\n\n\nWARNING: GENERATED TEXT IS 'N/A'\n\n \
-Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}"
+        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n\n \
+Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
             
         # writing the warning to a txt file
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
@@ -207,15 +207,15 @@ Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {
                 csv_writer.writerow(new_record)
                         
         else:
-            warning_while_generation = f"\n\n\n\nWARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
-THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'"
+            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
 
             # writing the warning to a txt file
             with open("data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv", 'a') as file:
                 file.write(warning_while_generation)
             
     except (SyntaxError, ValueError):        
-        warning_while_generation = f"\n\n\n\nWARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
+        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
         
         reply = "".join(reply) # some 
         question_start = reply.lower().find("question:")
@@ -236,7 +236,7 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '
                 
             csv_writer.writerow(new_record)
 
-        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}"
+        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
                 file.write(warning_while_generation)
 
@@ -286,12 +286,12 @@ three_keywords_records = sampled_data_records.drop(two_keywords_records.index)
 # 30 of 40 chunks that uses one keyword to find related chunks
 # will be compined with one another chunk that is the most similar to it for complex question generation
 # the oter 10 chunks will be compined with 2 other chunks that are the most similar to it for complex question generation
-count_for_one_keyword_two_chunks = 0 # 30
+count_for_one_keyword_two_chunks = 30 # 30
 
 # again 30 of 40 chunks that use two keywords to find related chunks
 # will be compined with one another chunk, and 10 chunks will be combined with 2 other most similar chunks
 # for complex question generation
-count_for_two_keywords_two_chunks = 0 # 30
+count_for_two_keywords_two_chunks = 4 # 30
 
 # 15 of 20 chunks that use three keywords to find related chunks
 # will be compined with one another chunk, and 5 chunks will be combined with 2 other most similar chunks
@@ -327,7 +327,11 @@ Louvre Museum as a world-renowned art institution?' which requires inferring inf
 all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
 
 num_of_records = all_records.shape[0] # the number of samples we took 
-for i in range(num_of_records):
+for i in range(44, num_of_records):
+    print("ITERATION: ", i)
+    print("count_for_one_keyword_two_chunk: ", count_for_one_keyword_two_chunks)
+    print("Count For Two Keywords Two Chunks: ", count_for_two_keywords_two_chunks)
+    print("Count For Three Keywords Two Chunks: ", count_for_three_keywords_two_chunks)
     pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]
     key_words = ast.literal_eval(key_words)
 
@@ -356,6 +360,7 @@ for i in range(num_of_records):
                         count_for_one_keyword_two_chunks += 1
                     else:
                         # otherwise we find TWO MOST SIMILAR CHUNKS
+                        print("1 KEYWORD 2 CHUNKS")
                         num_of_similar_chunks = 2
 
                 # TWO KEYWORDS SEARCH
