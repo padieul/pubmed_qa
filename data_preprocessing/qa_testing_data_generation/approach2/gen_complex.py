@@ -62,7 +62,7 @@ def main(csv_path, output_csv_path):
 
 # Adjust the paths as necessary
 csv_path = 'data_preprocessing\\data\\processed_data_for_testing_500_100.csv'
-output_csv_path = 'data_preprocessing\\qa_testing_data_generation\\approach1\\Complex_Questions.csv'
+output_csv_path = 'data_preprocessing\\qa_testing_data_generation\\approach2\\Complex_Questions.csv'
 
 # Run the main function
 main(csv_path, output_csv_path)
