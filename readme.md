@@ -3,8 +3,6 @@
 
 ## Table of Contents
 
-- [A RAG-based system for Pubmed](#a-rag-based-system-for-pubmed)
-  - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Data Preparation](#data-preparation)
     - [Data Collection](#data-collection)
