@@ -2,15 +2,18 @@
 # A RAG-based system for Pubmed
 
 ## Table of Contents
-1. [Overview](#overview)
-1. [Data Preparation](#data-preparation)
-    1. [Data Collection](#data-collection)
-    1. [Data Chunking](#data-chunking)
-    1. [Data Embedding](#data-embedding)
-    1. [Data Storage](#data-storage)
-1. [Information Retrieval](#information-retrieval)
-1. [Evaluation Metrics](#evaluation-metrics)
-1. [Test Dataset Generation](#test-dataset-generation)
+
+- [A RAG-based system for Pubmed](#a-rag-based-system-for-pubmed)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Data Preparation](#data-preparation)
+    - [Data Collection](#data-collection)
+    - [Data Chunking](#data-chunking)
+    - [Data Embedding](#data-embedding)
+    - [Data Storage](#data-storage)
+  - [Information Retrieval](#information-retrieval)
+  - [Evaluation Metrics](#evaluation-metrics)
+  - [Test Dataset Generation](#test-dataset-generation)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>.
@@ -203,7 +206,23 @@ Reference text = "Students enjoy doing homeworks"
 
     BLEU calculates unigram, bigram, trigram, 4-gram precision scores and reports individual precision scores and a BLEU Score that is the geometric mean of all four n-gram precisions. BLEU Score is easy to compute and popular but it does not consider meaning and incorporate sentence structure. 
 
-- BERTScore
+- BERTScore: BERTScore is an evaluation metric for text generation that leverages the power of BERT, a pre-trained deep bidirectional transformers model, to assess the quality of generated text compared to one or more reference texts. Unlike BLEU, which relies on exact matches of n-grams between the generated and reference texts, BERTScore computes semantic similarity using contextual embeddings from BERT. This allows it to capture the meaning of words in context more effectively, addressing some of the limitations of BLEU related to semantic content and sentence structure.
+
+How BERTScore Works:
+Contextual Embeddings: BERTScore computes the embeddings for each word in the generated text and the reference text(s) using BERT. These embeddings capture the contextual meaning of words, taking into account their surrounding words, which is a significant advantage over traditional n-gram matching.
+
+Cosine Similarity: For each word in the generated text, BERTScore finds the word in the reference text that has the highest cosine similarity in embedding space. This process is also done in reverse—from the reference text to the generated text—to ensure comprehensiveness.
+
+Precision, Recall, and F1 Score: BERTScore calculates precision as the average of the highest cosine similarities for each word in the generated text, recall as the average of the highest cosine similarities for each word in the reference text, and the F1 score as the harmonic mean of precision and recall. These scores reflect how well the generated text matches the reference text in terms of semantic similarity, rather than exact word matches.
+
+Handling Repetition: Since BERTScore is based on semantic similarity rather than counting exact matches, it is inherently more robust to issues of repetition. A text that simply repeats the same word or phrase will not trick the metric into giving a high score, as the overall semantic content and variety will be lacking.
+
+Sentence Structure: While BERTScore is more sensitive to the meaning of words and phrases than BLEU, it still does not explicitly model sentence structure or grammar. However, the use of deep contextual embeddings means that some aspects of sentence structure are inherently captured in the embeddings, as they reflect the use of words in specific syntactic contexts.
+
+Advantages of BERTScore:
+Semantic Sensitivity: By using contextual embeddings, BERTScore can assess the semantic content of texts more effectively than metrics based on exact word matches.
+Robustness: It is less susceptible to gaming through repetition or superficial word matches, focusing instead on the overall semantic quality of the text.
+Language Flexibility: BERT and its variants have been pre-trained in multiple languages, making BERTScore applicable to a wide range of languages beyond just English.
 
 
 ## Test Dataset Generation
@@ -237,6 +256,8 @@ The given text snippet is: " + chunk + " Remember and be careful: each of the en
 just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
 
+Complex Question Generation:
+- Approach 1:
     For complex questions, we find one or two most similar chunks to the given chunk. 
     We find the most similar chunk(s) as following:
     Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions in the case of sparse search. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
@@ -287,5 +308,27 @@ IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!
     We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
 
     We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
+    
+- Approach 2
+The gen_complex.py script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+
+Key Features:
+
+Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
+Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
+Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
+How It Works:
+
+Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
+Identifying Unique Pairs: It identifies unique pairs of abstracts with more than 15 common keywords, suggesting a meaningful connection between them.
+Generating Questions: For each identified pair, the script generates a complex question by synthesizing the content of both abstracts.
+Output: The generated questions and their corresponding abstract pairs are saved to an output CSV file for further use.
+
+Usage:
+Set your OpenAI API key in the script.
+Specify the input CSV file path containing the abstracts and keywords.
+Define the output CSV file path where the generated questions will be saved.
+Run the script to produce a dataset of complex questions based on scientific abstracts.
+  
 
     [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
