@@ -30,17 +30,17 @@ client_OS= OpenSearch(
 )
 
 client_OpenAI = OpenAI(
-    api_key = "" # OpenAI API TOKEN TO BE INSERTED HERE
+    api_key = "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" # OpenAI API TOKEN TO BE INSERTED HERE
 )
 
 
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "" # HUGGINGFACEHUB API TOKEN TO BE INSERTED HERE
+# os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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" # HUGGINGFACEHUB API TOKEN TO BE INSERTED HERE
 
-repo_id = "tiiuae/falcon-7b-instruct" 
+# repo_id = "tiiuae/falcon-7b-instruct" 
 
-falcon_llm = HuggingFaceHub(
-    repo_id=repo_id, model_kwargs={"temperature": 0.1}
-)
+# falcon_llm = HuggingFaceHub(
+#     repo_id=repo_id, model_kwargs={"temperature": 0.1}
+# )
 
 
 def create_test_csv(file_path):
@@ -291,7 +291,7 @@ count_for_one_keyword_two_chunks = 30 # 30
 # again 30 of 40 chunks that use two keywords to find related chunks
 # will be compined with one another chunk, and 10 chunks will be combined with 2 other most similar chunks
 # for complex question generation
-count_for_two_keywords_two_chunks = 4 # 30
+count_for_two_keywords_two_chunks = 9 # 30
 
 # 15 of 20 chunks that use three keywords to find related chunks
 # will be compined with one another chunk, and 5 chunks will be combined with 2 other most similar chunks
@@ -327,7 +327,7 @@ Louvre Museum as a world-renowned art institution?' which requires inferring inf
 all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
 
 num_of_records = all_records.shape[0] # the number of samples we took 
-for i in range(44, num_of_records):
+for i in range(49, num_of_records):
     print("ITERATION: ", i)
     print("count_for_one_keyword_two_chunk: ", count_for_one_keyword_two_chunks)
     print("Count For Two Keywords Two Chunks: ", count_for_two_keywords_two_chunks)
