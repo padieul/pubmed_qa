@@ -1,6 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from utils import llm_model, opensearch_vector_store, build_references, processed_output
+from utils import llm_model, opensearch_vector_store, build_references, processed_output, VariableRetriever
 from config import set_api_keys
 from langchain.chains import RetrievalQA
 from langchain import hub
@@ -74,7 +74,9 @@ def initialize_rag_pipeline():
     SERVER_STATUS_MESSAGE = "Initializing Opensearch backend..."
     SERVER_STATUS = "NOK"
     vector_store = opensearch_vector_store(index_name="pubmed_500_100")
-    retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk", "vector_field":"embedding"})
+    retriever = vector_store.as_retriever(search_kwargs={"k": 20, "text_field":"chunk", "vector_field":"embedding"})
+    v_retriever = VariableRetriever(vectorstore=retriever, filter_year="2018")
+
 
     # Loads the latest version of RAG prompt
     SERVER_STATUS_MESSAGE = "Setting up RAG pipeline..."
@@ -85,7 +87,7 @@ def initialize_rag_pipeline():
     rag_pipeline = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=retriever,
+        retriever=v_retriever,
         return_source_documents=True,
         chain_type_kwargs={"prompt": prompt, "verbose":"True"},
         verbose=True    

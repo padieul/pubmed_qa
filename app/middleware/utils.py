@@ -4,6 +4,11 @@ from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_community.llms import Replicate
 from langchain import HuggingFaceHub
 
+from langchain_core.vectorstores import VectorStoreRetriever
+from langchain_core.pydantic_v1 import Field
+from langchain_core.documents.base import Document
+from typing import List
+
 
 def pretty_response(response):
     """
@@ -49,6 +54,49 @@ def os_client():
         verify_certs=False,
         ssl_show_warn=False,
     )
+
+
+
+class VariableRetriever(VectorStoreRetriever):
+    vectorstore: VectorStoreRetriever
+    search_type: str = "similarity"
+    search_kwargs: dict = Field(default_factory=dict)
+    #filter_title: str  
+    #filter_month: str
+    filter_year: str
+    #filter_prefix: str
+
+    """
+    def retrieve(self):
+        return self.retriever.retrieve()
+    """
+    
+    def get_relevant_documents(self, query: str) -> List[Document]:
+        results =  self.vectorstore.get_relevant_documents(query=query)
+        print(f"Lenght of results: {len(results)}")
+        filtered_results = [doc for doc in results if str(doc.metadata['year']).startswith(str(self.filter_year))]
+        print(f"Lenght of filtered results: {len(filtered_results)}")
+        if len(filtered_results) > 3:
+            return filtered_results[:3]
+        else:
+            return filtered_results
+
+"""
+'source_documents': [Document(page_content='and severe motor disorders with and without truncal tone impairments 
+treated in two specialized hospitals (60 inpatients and 42 outpatients; 60 males, mean age 16.5 +/- 1.2 years, 
+range 12 to 18 yrs). Clinical and functional data were collected between 2006 and 2021. TT-PredictMed, a multiple 
+logistic regression prediction model, was developed to identify factors associated with hypotonic or spastic TT following
+ the guidelines of "Transparent Reporting of a multivariable prediction model for', 
+ metadata={'pmid': 37371021, 'title': 'Identifying Postural Instability in Children with Cerebral 
+ Palsy Using a Predictive Model: A Longitudinal Multicenter Study.', 'chunk_id': 1, 'chunk': 'and severe motor 
+ disorders with and without truncal tone impairments treated in two specialized hospitals 
+ (60 inpatients and 42 outpatients; 60 males, mean age 16.5 +/- 1.2 years, range 12 to 18 yrs). 
+ Clinical and functional data were collected between 2006 and 2021. TT-PredictMed, a multiple 
+ logistic regression prediction model, was developed to identify factors associated with hypotonic 
+ or spastic TT following the guidelines of "Transparent Reporting of a multivariable prediction model 
+ 
+
+"""
 
 
 def opensearch_vector_store(index_name: str = None):
@@ -135,6 +183,6 @@ def processed_output(output: str):
     Returns:
         formatted_answer (str): A properly formatted answer to display in the web front-end
     '''
-    formatted_answer = output[output.find('Answer:') + 8:]
+    formatted_answer = output[output.find('Answer:') + 9:]
 
     return formatted_answer
