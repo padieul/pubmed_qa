@@ -10,6 +10,7 @@
     - [Data Embedding](#data-embedding)
     - [Data Storage](#data-storage)
   - [Information Retrieval](#information-retrieval)
+  - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
 
