@@ -6,11 +6,38 @@
 
   let messageNew = '';
   let references = [];
+  let globalStatusMessage = '';
+  let globalStatus = '';
 
+  let intervalId = setInterval(async function() {
+    let { statusMessage, status } = await fetchServerStatus();
 
+      if (status === 'OK') {
+        globalStatus = 'OK';
+        clearInterval(intervalId);
+      }
+      else if (status === 'NOK') {
+        globalStatus = 'NOK';
+        globalStatusMessage = statusMessage;
+      }
+    }, 1000);
 
-  // Call the function when the page loads
-fetchStorageInfo();
+  async function fetchServerStatus() {
+  try {
+      const response = await fetch('http://localhost:8000/server_status'); // replace with your actual API endpoint
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      let serverStatusMessage = await response.json();
+      return {statusMessage: serverStatusMessage.serverMessage, status: serverStatusMessage.serverStatus};
+
+      } catch (error) {
+      console.error('Backend error:', error);
+  }
+}
+  
 
 
 
@@ -57,23 +84,9 @@ function extractReferences(message) {
 }
 
 // main.js
-async function fetchStorageInfo() {
-    try {
-      const response = await fetch('http://localhost:8000/storage_info'); // replace with your actual API endpoint
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      const storageInfo = data.info; // replace with your actual data property
-  
-      document.getElementById('storage-info').textContent = storageInfo;
-    } catch (error) {
-      console.error('Error fetching storage info:', error);
-      document.getElementById('storage-info').textContent = 'Error fetching storage info';
-    }
-  }
+
+
+
 
   async function sendMessage() {
     if (userInput.trim() !== '') {
@@ -124,6 +137,17 @@ async function fetchStorageInfo() {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 20px;
+  }
+
+  #server-info {
+    border-radius: 5px;
+  }
+
+  #server-placeholder {
+    border-radius: 5px;
+    text-align: center;
+    color: green;
   }
 
   #storage-info-container {
@@ -135,6 +159,25 @@ async function fetchStorageInfo() {
   }
 
   #chat-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    max-height: 1000px; /* Add this line */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  #chat-container:empty {
+  display: none;
+  }
+
+  #user-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 10px;
     overflow: hidden;
@@ -148,11 +191,11 @@ async function fetchStorageInfo() {
     overflow-y: auto;
   }
 
-  #user-input-container {
-    display: flex;
-    align-items: center;
-    padding: 10px;
+  #chat-messages:empty {
+  display: none;
   }
+
+  
 
   #user-input {
     flex: 1;
@@ -171,16 +214,32 @@ async function fetchStorageInfo() {
     cursor: pointer;
   }
 
-  #reference-container {
-    border: 2px solid blue;
+  #bot-message-container {
+    padding: 10px;
     border-radius: 5px;
+    border: 2px solid rgb(237, 222, 157);
+    background-color: rgb(237, 222, 157);
+  }
+
+  #sources-container {
+    display: flex;
+    flex-direction: column; /* Stack words vertically */
+    align-items: left; /* Center items horizontally */
+    gap: 10px; /* Space between items */
+    margin: 5px 0; /* Add this line */
+  }
+
+  #reference-container {
+    border: 2px solid lighblue;
+    background-color: lightblue;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Soft shadow for depth */
     padding: 2px;
     cursor: pointer;
-    margin: 35px 0; /* Add this line */
   }
 
   #reference-container:hover {
-    background-color: lightblue;
+    background-color: blue;
   }
 </style>
 
@@ -195,16 +254,27 @@ async function fetchStorageInfo() {
 
   <div id="chat-container">
     <div id="chat-messages">
+    {#if globalStatus !== 'OK'}
+      <div id="server-info">
+        <strong>Server status: </strong> {globalStatusMessage}
+      </div>
+    {:else if messages.length === 0}
+      <div id="server-placeholder">
+        <strong>The server is running now!</strong>
+      </div>
+    {:else}
     {#each messages as { sender, message, references }}
     {#if sender === 'You'}
       <div>
         <strong>{sender}:</strong> {message}
       </div>
     {:else if sender === 'Bot'}
+    <div id="bot-message-container">
       <div>
-        <strong>{sender}:</strong> {message}
+        <strong>{"Answer:"}:</strong> {message}
       </div>
-      <strong>{"References:"}</strong>
+      <strong>{"Sources:"}</strong>
+      <div id="sources-container">
       {#each references as reference}
       <div>
       <a href={reference} target="_blank" id="reference-container">
@@ -212,12 +282,17 @@ async function fetchStorageInfo() {
       </a>
       </div>
       {/each}
+      </div>
+    </div>
     {/if}
     {/each}
-    <div id="user-input-container">
-      <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
-      <button id="send-button" on:click={sendMessage}>Send</button>
+    {/if}
     </div>
   </div>
-</div>
+  <div id="user-input-container">
+      <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
+      <button id="send-button" on:click={sendMessage}>Send</button>
+  </div>
+  
+
 </body>
