@@ -30,11 +30,11 @@ client_OS= OpenSearch(
 )
 
 client_OpenAI = OpenAI(
-    api_key = "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" # OpenAI API TOKEN TO BE INSERTED HERE
+    api_key = "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" # OpenAI API TOKEN TO BE INSERTED HERE
 )
 
 
-# os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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" # HUGGINGFACEHUB API TOKEN TO BE INSERTED HERE
+# os.environ["HUGGINGFACEHUB_API_TOKEN"] = "" # HUGGINGFACEHUB API TOKEN TO BE INSERTED HERE
 
 # repo_id = "tiiuae/falcon-7b-instruct" 
 
@@ -183,7 +183,7 @@ def write_to_test_set(pmid, pmid2, pmid3,
 
     if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
         warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n\n \
-Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+Original Reply: '{reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
             
         # writing the warning to a txt file
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
@@ -208,10 +208,10 @@ Original Reply: '{reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {
                         
         else:
             warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
-THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID: '{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
 
             # writing the warning to a txt file
-            with open("data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv", 'a') as file:
+            with open("data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv", 'a') as file:
                 file.write(warning_while_generation)
             
     except (SyntaxError, ValueError):        
@@ -226,9 +226,9 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '
 
         reformatted_reply = [question, answer] # reformatted reply
 
-        test_set_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv'
+        test_set_with_warnings_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv'
 
-        with open(test_set_file_path, 'a', newline='') as file:
+        with open(test_set_with_warnings_file_path, 'a', newline='') as file:
             csv_writer = csv.writer(file, delimiter='\t')
                         
             new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
@@ -236,14 +236,13 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID:'{pmid}', CHUNK ID: '
                 
             csv_writer.writerow(new_record)
 
-        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID:{pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
         with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
                 file.write(warning_while_generation)
-
             
     return
 
-# create_test_csv("") # To create the test set csv file - run only once
+# create_test_csv("data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv") # To create the test set csv file - run only once
 
 # run only once to process the original data embeddings file and create a new one
 # get_useful_records("data_preprocessing/data/data_embeddings_500_100.csv") 
@@ -268,7 +267,7 @@ sampled_data_records = df_data_embeddings.sample(n=100)
 one_keyword_records = sampled_data_records.sample(n=40)
 
 # Dropping 40 records (that uses one keyword for similarity) from the original 100 selected records.
-# sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
+sampled_data_records = sampled_data_records.drop(one_keyword_records.index)
 
 # Here we randomly take another 40 records from the remaining 60, initially selected records.
 # these chunks/records will use 2 keywords to find similar chunks to generate complex questions
@@ -291,7 +290,7 @@ count_for_one_keyword_two_chunks = 30 # 30
 # again 30 of 40 chunks that use two keywords to find related chunks
 # will be compined with one another chunk, and 10 chunks will be combined with 2 other most similar chunks
 # for complex question generation
-count_for_two_keywords_two_chunks = 9 # 30
+count_for_two_keywords_two_chunks = 30 # 30
 
 # 15 of 20 chunks that use three keywords to find related chunks
 # will be compined with one another chunk, and 5 chunks will be combined with 2 other most similar chunks
@@ -324,12 +323,14 @@ Louvre Museum as a world-renowned art institution?' which requires inferring inf
 # then we have records that we will use two keywords to find its similar chunks,
 # and finally we have records that we will use three keywords to find its similar chunks.
 # Rows of these records are stacked on top of the other.
+
 all_records = pandas.concat([one_keyword_records, two_keywords_records, three_keywords_records], ignore_index=True)
 
 num_of_records = all_records.shape[0] # the number of samples we took 
-for i in range(49, num_of_records):
-    print("ITERATION: ", i)
-    print("count_for_one_keyword_two_chunk: ", count_for_one_keyword_two_chunks)
+for i in range(74, num_of_records):
+    # BELOW PRINT STATEMENTS ARE TO KEEP TRACK OF THE RUNNING PROGRAM IN CASE THE RATE LIMIT OF OpenAI API IS REACHED
+    print("Iteration: ", i)
+    print("Count For One Keyword Two Chunk: ", count_for_one_keyword_two_chunks)
     print("Count For Two Keywords Two Chunks: ", count_for_two_keywords_two_chunks)
     print("Count For Three Keywords Two Chunks: ", count_for_three_keywords_two_chunks)
     pmid, title, chunk_id, chunk, embedding, key_words = all_records.iloc[i, ]

@@ -2,15 +2,16 @@
 # A RAG-based system for Pubmed
 
 ## Table of Contents
-1. [Overview](#overview)
-1. [Data Preparation](#data-preparation)
-    1. [Data Collection](#data-collection)
-    1. [Data Chunking](#data-chunking)
-    1. [Data Embedding](#data-embedding)
-    1. [Data Storage](#data-storage)
-1. [Information Retrieval](#information-retrieval)
-1. [Evaluation Metrics](#evaluation-metrics)
-1. [Test Dataset Generation](#test-dataset-generation)
+
+  - [Overview](#overview)
+  - [Data Preparation](#data-preparation)
+    - [Data Collection](#data-collection)
+    - [Data Chunking](#data-chunking)
+    - [Data Embedding](#data-embedding)
+    - [Data Storage](#data-storage)
+  - [Information Retrieval](#information-retrieval)
+  - [Evaluation Metrics](#evaluation-metrics)
+  - [Test Dataset Generation](#test-dataset-generation)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>.
@@ -203,7 +204,23 @@ Reference text = "Students enjoy doing homeworks"
 
     BLEU calculates unigram, bigram, trigram, 4-gram precision scores and reports individual precision scores and a BLEU Score that is the geometric mean of all four n-gram precisions. BLEU Score is easy to compute and popular but it does not consider meaning and incorporate sentence structure. 
 
-- BERTScore
+- BERTScore: BERTScore is an evaluation metric for text generation that leverages the power of BERT, a pre-trained deep bidirectional transformers model, to assess the quality of generated text compared to one or more reference texts. Unlike BLEU, which relies on exact matches of n-grams between the generated and reference texts, BERTScore computes semantic similarity using contextual embeddings from BERT. This allows it to capture the meaning of words in context more effectively, addressing some of the limitations of BLEU related to semantic content and sentence structure.
+
+How BERTScore Works:
+Contextual Embeddings: BERTScore computes the embeddings for each word in the generated text and the reference text(s) using BERT. These embeddings capture the contextual meaning of words, taking into account their surrounding words, which is a significant advantage over traditional n-gram matching.
+
+Cosine Similarity: For each word in the generated text, BERTScore finds the word in the reference text that has the highest cosine similarity in embedding space. This process is also done in reverse—from the reference text to the generated text—to ensure comprehensiveness.
+
+Precision, Recall, and F1 Score: BERTScore calculates precision as the average of the highest cosine similarities for each word in the generated text, recall as the average of the highest cosine similarities for each word in the reference text, and the F1 score as the harmonic mean of precision and recall. These scores reflect how well the generated text matches the reference text in terms of semantic similarity, rather than exact word matches.
+
+Handling Repetition: Since BERTScore is based on semantic similarity rather than counting exact matches, it is inherently more robust to issues of repetition. A text that simply repeats the same word or phrase will not trick the metric into giving a high score, as the overall semantic content and variety will be lacking.
+
+Sentence Structure: While BERTScore is more sensitive to the meaning of words and phrases than BLEU, it still does not explicitly model sentence structure or grammar. However, the use of deep contextual embeddings means that some aspects of sentence structure are inherently captured in the embeddings, as they reflect the use of words in specific syntactic contexts.
+
+Advantages of BERTScore:
+Semantic Sensitivity: By using contextual embeddings, BERTScore can assess the semantic content of texts more effectively than metrics based on exact word matches.
+Robustness: It is less susceptible to gaming through repetition or superficial word matches, focusing instead on the overall semantic quality of the text.
+Language Flexibility: BERT and its variants have been pre-trained in multiple languages, making BERTScore applicable to a wide range of languages beyond just English.
 
 
 ## Test Dataset Generation
@@ -216,13 +233,32 @@ Reference text = "Students enjoy doing homeworks"
     6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
 
     Question Generation Process:
-    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available 
-    [api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.]
+    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.
+    We have also tried other freely available models but they do not offer enough rate for our case. So, we had to continue with gpt-3.5-turbo model.
     One of 6 prompts for each question type is used along with a given chunks (chunks in the case of complex questions) to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
 
+    For questions; Confirmation, Factoid-type, List-type, Causal, Hypothetical, we use the following prompts for each question concatenated to the common prompt that is
+    Here are the 5 specific prompt for each type of question.
+        prompts = [
+            "You to generate a Yes/No question that require an understanding of a given context and deciding a boolean value for an  answer, e.g., 'Is Paris the capital of France?'. ",
+            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
+            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the capital of France throughout its history?'. ",
+            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
+            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
+    ]
+    It is important to note that based on the question we select a specific prompt from above and concatenate to the common prompt that is not dependent on question type for the mentioned 5 questions. 
+    The common prompt for these questions is below;
+    
+    "You need to use the given text snippet to generate the question!!. You also need to generate an answer for your question. \
+The given text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
+
+Complex Question Generation:
+- Approach 1:
     For complex questions, we find one or two most similar chunks to the given chunk. 
     We find the most similar chunk(s) as following:
-    Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
+    Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions in the case of sparse search. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
     We divide the sample into 3 parts with the sizes of 40, 40, 20. 
     1) In the first 40 records, we do sparse search with just one keyword.
     2) In the second part that has 40 records, we do the sparse search with two keywords.
@@ -235,7 +271,7 @@ Reference text = "Students enjoy doing homeworks"
     Althoug we are looking for the most similar chunk, here we do the search with the size of 2. 
     That is because of the fact that it is perfectly possible to get the chunk itself while we are searching for its similars. If it is the case, we do not consider the chunk itself. If it is not, we take the most similar not considering the remaining similars.
     
-    In the remaining part of these records - the remaining 10 (25%), we are search for the two most similar chunks. Similarly, making the search size 3 because of the possibility of getting the chunk itself as its similar.
+    In the remaining part of these records - the remaining 10 (25%), we are searching for the two most similar chunks. Similarly, making the search size 3 because of the possibility of getting the chunk itself as its similar.
 
     That is the same for the remaining two part of the whole sample with the sizes of 40, 20, respectively. We do the search for the most similar chunk for the 75% of the part, and do search for the two most similar chunks for the 25% of the part. 
 
@@ -259,7 +295,6 @@ Reference text = "Students enjoy doing homeworks"
             "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the capital of France throughout its history?'. ",
             "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
             "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
-            "Complex Questions: PROMPT TO BE DETERMINED"
     ]
 
     By having a prompt for each question type, we know for sure that which type of question is generated. This is also beneficial in terms of making a prompt as specific as possible. 
@@ -271,5 +306,27 @@ Reference text = "Students enjoy doing homeworks"
     We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
 
     We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
+    
+- Approach 2
+The gen_complex.py script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+
+Key Features:
+
+Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
+Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
+Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
+How It Works:
+
+Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
+Identifying Unique Pairs: It identifies unique pairs of abstracts with more than 15 common keywords, suggesting a meaningful connection between them.
+Generating Questions: For each identified pair, the script generates a complex question by synthesizing the content of both abstracts.
+Output: The generated questions and their corresponding abstract pairs are saved to an output CSV file for further use.
+
+Usage:
+Set your OpenAI API key in the script.
+Specify the input CSV file path containing the abstracts and keywords.
+Define the output CSV file path where the generated questions will be saved.
+Run the script to produce a dataset of complex questions based on scientific abstracts.
+  
 
     [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
