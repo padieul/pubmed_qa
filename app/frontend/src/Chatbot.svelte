@@ -2,6 +2,12 @@
 <script>
   let messages = [];
   let userInput = '';
+  let sender = '';
+
+  let messageNew = '';
+  let references = [];
+
+
 
   // Call the function when the page loads
 fetchStorageInfo();
@@ -31,6 +37,25 @@ function appendMessage(sender, message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function extractReferences(message) {
+
+    console.log("Extracting references...")
+    // separate message string by "_" character
+    let temp = message.split("_");
+    if (temp.length > 1) {
+        const references = temp[1].split("|").slice(1);
+        messageNew = temp[0]
+        console.log(messageNew)
+        console.log(references)
+        return messageNew, references
+    }
+    else {
+      return message, []
+    }
+
+    
+}
+
 // main.js
 async function fetchStorageInfo() {
     try {
@@ -52,15 +77,27 @@ async function fetchStorageInfo() {
 
   async function sendMessage() {
     if (userInput.trim() !== '') {
-      messages = [...messages, { sender: 'You', message: userInput }];
+      sender = "You"
+      messages = [...messages, { sender: 'You', message: userInput, references: [] }];
+      
 
       try {
         // TODO: Add logic to send the message to the backend and get the bot's response
         const response = await sendToBackend(userInput);
-        const botResponse = response.message;
+        //const botResponse = response.message;
+        const responseText = response.message 
+        
+        // print to console: responseText, references
+        // console.log(responseText);
+
+        messageNew, references = extractReferences(responseText)
+        console.log(references)
+        console.log(messageNew)
 
         // Display the bot's response
-        messages = [...messages, { sender: 'Bot', message: botResponse }];
+        sender = "Bot"
+        messages = [...messages, { sender: 'Bot', message: messageNew, references: references}];
+        
       } catch (error) {
         console.error('Error sending message to backend:', error);
       }
@@ -73,21 +110,20 @@ async function fetchStorageInfo() {
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-image: url('images/medicine.jpg');
+    background-image: url('/images/medicine.jpg');
     background-size: cover;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
-      }
-  
-  #chat-container {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-    overflow: hidden;
-    width: 600px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    cursor: url('/images/stethoscope.png') 100 100, auto;
+  }
+
+  #main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   #storage-info-container {
@@ -97,19 +133,27 @@ async function fetchStorageInfo() {
     width: 200px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   }
-  
+
+  #chat-container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
   #chat-messages {
     padding: 10px;
     max-height: 300px;
     overflow-y: auto;
   }
-  
+
   #user-input-container {
     display: flex;
     align-items: center;
     padding: 10px;
   }
-  
+
   #user-input {
     flex: 1;
     padding: 8px;
@@ -117,7 +161,7 @@ async function fetchStorageInfo() {
     border: none;
     border-radius: 5px;
   }
-  
+
   #send-button {
     padding: 8px;
     border: none;
@@ -126,16 +170,54 @@ async function fetchStorageInfo() {
     color: white;
     cursor: pointer;
   }
+
+  #reference-container {
+    border: 2px solid blue;
+    border-radius: 5px;
+    padding: 2px;
+    cursor: pointer;
+    margin: 35px 0; /* Add this line */
+  }
+
+  #reference-container:hover {
+    background-color: lightblue;
+  }
 </style>
 
-<div>
-  <div>
-    {#each messages as { sender, message }}
-      <div><strong>{sender}:</strong> {message}</div>
-    {/each}
+<body>
+<div id="main-container">
+  
+  <!--
+  <div id="storage-info-container">
+    <p id="storage-info">Storage information goes here</p>
   </div>
-  <div>
-    <input bind:value={userInput} placeholder="Type a message..." />
-    <button on:click={sendMessage}>Send</button>
+  -->
+
+  <div id="chat-container">
+    <div id="chat-messages">
+    {#each messages as { sender, message, references }}
+    {#if sender === 'You'}
+      <div>
+        <strong>{sender}:</strong> {message}
+      </div>
+    {:else if sender === 'Bot'}
+      <div>
+        <strong>{sender}:</strong> {message}
+      </div>
+      <strong>{"References:"}</strong>
+      {#each references as reference}
+      <div>
+      <a href={reference} target="_blank" id="reference-container">
+        {reference}
+      </a>
+      </div>
+      {/each}
+    {/if}
+    {/each}
+    <div id="user-input-container">
+      <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
+      <button id="send-button" on:click={sendMessage}>Send</button>
+    </div>
   </div>
 </div>
+</body>

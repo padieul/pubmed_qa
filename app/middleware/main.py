@@ -60,7 +60,7 @@ async def retrieve_documents(query_str: str):
 
     output = processed_output(answer["result"])
     
-    return {"message": output + "\n\n" + build_references(answer["source_documents"])}
+    return {"message": output + "_" + build_references(answer["source_documents"])}
 
 
 @app.get("/retrieve_documents_sparse")
