@@ -169,9 +169,9 @@ We encapsulated the creation of vector store through the helper functions that c
 
 The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
 
-(`App.svelte`): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
+(`App.svelte`)(app/frontend/src/App.svelte): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
 
-(`Chatbot.svelte`): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
+(`Chatbot.svelte`)(app/frontend/src/Chatbot.svelte): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
 
 ### File Descriptions
 #### App.svelte
