@@ -10,15 +10,7 @@
     - [Data Embedding](#data-embedding)
     - [Data Storage](#data-storage)
   - [Information Retrieval](#information-retrieval)
-  - [Information Retrieval](#information-retrieval-1)
-    - [File Descriptions](#file-descriptions)
-      - [App.svelte](#appsvelte)
-        - [Key Features:](#key-features)
-      - [Chatbot.svelte](#chatbotsvelte)
-        - [Key Features:](#key-features-1)
-    - [Requirements](#requirements)
-      - [To run this application:](#to-run-this-application)
-    - [Screenshots](#screenshots)
+  - [User Interface](#user-interface)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
@@ -173,7 +165,7 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk
 
 We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
-## Information Retrieval
+## User Interface
 
 The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
 
