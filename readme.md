@@ -163,6 +163,43 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk
 
 We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
+
+## Text Generation
+
+We experimented using multiple large language models like [`Llama 2`](https://huggingface.co/meta-llama), [`OpenAI`](https://openai.com/blog/openai-api), and [`Phi-2`](https://huggingface.co/microsoft/phi-2) using both the local and hosted options, but because of the resource limitations and the requirements for credit cards we ended up using the [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) model because the inference API is free of charge and publicly available on [`HuggingFace`](https://huggingface.co/) without any requirements other that the API token. To access the inference API we can use `HuggingFaceHub` or [`HuggingFaceEndpoint`](https://python.langchain.com/docs/integrations/llms/huggingface_endpoint) interface provided by [`LangChain`](https://www.langchain.com/)
+
+We initialized the model with very low temperature as we are interested in the factual nature of the answer more than its randomness, we also limited the length of the answer to a 500 tokens to keep it more convenient for reading.
+
+```Python    
+repo_id = "tiiuae/falcon-7b-instruct" 
+llm = HuggingFaceHub(
+    repo_id=repo_id, model_kwargs={"temperature": 0.01, "max_new_tokens": 500}
+)   
+```
+
+> We used the old `HuggingFaceHub` interface instead of the new [`HuggingFaceEndpoint`](https://python.langchain.com/docs/integrations/llms/huggingface_endpoint) because it is still not stable and not working properly
+
+We built a [`LangChain`](https://www.langchain.com/) RAG pipeline using the chain [`RetrievalQA`](https://api.python.langchain.com/en/latest/chains/langchain.chains.retrieval_qa.base.RetrievalQA.html) as in the snippet below:
+
+```Python
+# Loads the latest version of RAG prompt
+prompt = hub.pull("rlm/rag-prompt", api_url="https://api.hub.langchain.com")
+
+# Initialize langChain RAG pipeline
+rag_pipeline = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True,
+    chain_type_kwargs={"prompt": prompt, "verbose":"True"},
+    verbose=True    
+)
+```
+
+As shown above, we used the most up-to-date RAG prompt provided by [`LangChain`](https://www.langchain.com/) that can be downloaded from [`LangChain`](https://www.langchain.com/) hub `rlm/rag-prompt`. We used a `chain_type` of `stuff` to use all the documents retrieved from [`OpenSearch`](https://opensearch.org/) as a context in the answer generation process, in addition to that we configured the RAG pipeline to return the source documents used in the answer generation to use their metadata in following steps like constructing the URLs of the original articles in [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/) that will be provided to the user as sources.
+
+
+
 ## Evaluation Metrics
 
 Let's have an example to better understand the below mentioned evaluation metrics.
