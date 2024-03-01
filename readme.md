@@ -3,6 +3,8 @@
 
 ## Table of Contents
 
+- [A RAG-based system for Pubmed](#a-rag-based-system-for-pubmed)
+  - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Data Preparation](#data-preparation)
     - [Data Collection](#data-collection)
@@ -10,6 +12,15 @@
     - [Data Embedding](#data-embedding)
     - [Data Storage](#data-storage)
   - [Information Retrieval](#information-retrieval)
+  - [Information Retrieval](#information-retrieval-1)
+    - [File Descriptions](#file-descriptions)
+      - [App.svelte](#appsvelte)
+        - [Key Features:](#key-features)
+      - [Chatbot.svelte](#chatbotsvelte)
+        - [Key Features:](#key-features-1)
+    - [Requirements](#requirements)
+      - [To run this application:](#to-run-this-application)
+    - [Screenshots](#screenshots)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
@@ -164,6 +175,43 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk
 
 We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
+## Information Retrieval
+
+The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
+
+(`App.svelte`): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
+
+(`Chatbot.svelte`): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
+
+### File Descriptions
+#### App.svelte
+The core component of the application, setting up the layout, styles, and integrating the Chatbot.svelte component. It is crucial for initializing the application and providing a container for the chatbot's functionality.
+
+##### Key Features:
+Application layout initialization.
+Global styles and themes inclusion.
+Integration of the Chatbot.svelte component.
+
+#### Chatbot.svelte
+Focuses on the chatbot functionality, including the user interface and interaction logic. It allows for user interaction through message input and displays chatbot responses.
+
+##### Key Features:
+User message input field.
+Display area for user and chatbot messages.
+Logic for processing user input and generating responses.
+Getting Started
+
+### Requirements
+[`Node.js`](https://nodejs.org/en) (Version 12.x or higher)
+[`npm`](https://docs.npmjs.com/) (Node Package Manager)
+
+#### To run this application:
+Install Dependencies: In the project root, run npm install to install dependencies.
+Run the Application: Execute npm run dev to start the server. Access the app at http://localhost:5000.
+Interact with the Chatbot: Use the web interface to communicate with the chatbot.
+
+### Screenshots
+Here are some screenshots of the frontend interface to give you a glimpse of what to expect:
 
 ## Text Generation
 
