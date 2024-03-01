@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 opensearch-py
+asyncio
 angle-emb # it takse sometime to download
 langchain # it takes sometime to downlaod
 langchainhub

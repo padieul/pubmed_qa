@@ -2,9 +2,42 @@
 <script>
   let messages = [];
   let userInput = '';
+  let sender = '';
 
-  // Call the function when the page loads
-fetchStorageInfo();
+  let messageNew = '';
+  let references = [];
+  let globalStatusMessage = '';
+  let globalStatus = '';
+
+  let intervalId = setInterval(async function() {
+    let { statusMessage, status } = await fetchServerStatus();
+
+      if (status === 'OK') {
+        globalStatus = 'OK';
+        clearInterval(intervalId);
+      }
+      else if (status === 'NOK') {
+        globalStatus = 'NOK';
+        globalStatusMessage = statusMessage;
+      }
+    }, 1000);
+
+  async function fetchServerStatus() {
+  try {
+      const response = await fetch('http://localhost:8000/server_status'); // replace with your actual API endpoint
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      let serverStatusMessage = await response.json();
+      return {statusMessage: serverStatusMessage.serverMessage, status: serverStatusMessage.serverStatus};
+
+      } catch (error) {
+      console.error('Backend error:', error);
+  }
+}
+  
 
 
 
@@ -31,36 +64,53 @@ function appendMessage(sender, message) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// main.js
-async function fetchStorageInfo() {
-    try {
-      const response = await fetch('http://localhost:8000/storage_info'); // replace with your actual API endpoint
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      const storageInfo = data.info; // replace with your actual data property
-  
-      document.getElementById('storage-info').textContent = storageInfo;
-    } catch (error) {
-      console.error('Error fetching storage info:', error);
-      document.getElementById('storage-info').textContent = 'Error fetching storage info';
+function extractReferences(message) {
+
+    console.log("Extracting references...")
+    // separate message string by "_" character
+    let temp = message.split("_");
+    if (temp.length > 1) {
+        const references = temp[1].split("|").slice(1);
+        messageNew = temp[0]
+        console.log(messageNew)
+        console.log(references)
+        return messageNew, references
     }
-  }
+    else {
+      return message, []
+    }
+
+    
+}
+
+// main.js
+
+
+
 
   async function sendMessage() {
     if (userInput.trim() !== '') {
-      messages = [...messages, { sender: 'You', message: userInput }];
+      sender = "You"
+      messages = [...messages, { sender: 'You', message: userInput, references: [] }];
+      
 
       try {
         // TODO: Add logic to send the message to the backend and get the bot's response
         const response = await sendToBackend(userInput);
-        const botResponse = response.message;
+        //const botResponse = response.message;
+        const responseText = response.message 
+        
+        // print to console: responseText, references
+        // console.log(responseText);
+
+        messageNew, references = extractReferences(responseText)
+        console.log(references)
+        console.log(messageNew)
 
         // Display the bot's response
-        messages = [...messages, { sender: 'Bot', message: botResponse }];
+        sender = "Bot"
+        messages = [...messages, { sender: 'Bot', message: messageNew, references: references}];
+        
       } catch (error) {
         console.error('Error sending message to backend:', error);
       }
@@ -73,21 +123,31 @@ async function fetchStorageInfo() {
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-image: url('images/medicine.jpg');
+    background-image: url('/images/medicine.jpg');
     background-size: cover;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
-      }
-  
-  #chat-container {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-    overflow: hidden;
-    width: 600px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    cursor: url('/images/stethoscope.png') 100 100, auto;
+  }
+
+  #main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  #server-info {
+    border-radius: 5px;
+  }
+
+  #server-placeholder {
+    border-radius: 5px;
+    text-align: center;
+    color: green;
   }
 
   #storage-info-container {
@@ -97,19 +157,46 @@ async function fetchStorageInfo() {
     width: 200px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   }
-  
+
+  #chat-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    max-height: 1000px; /* Add this line */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  #chat-container:empty {
+  display: none;
+  }
+
+  #user-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
   #chat-messages {
     padding: 10px;
     max-height: 300px;
     overflow-y: auto;
   }
-  
-  #user-input-container {
-    display: flex;
-    align-items: center;
-    padding: 10px;
+
+  #chat-messages:empty {
+  display: none;
   }
+
   
+
   #user-input {
     flex: 1;
     padding: 8px;
@@ -117,7 +204,7 @@ async function fetchStorageInfo() {
     border: none;
     border-radius: 5px;
   }
-  
+
   #send-button {
     padding: 8px;
     border: none;
@@ -126,16 +213,86 @@ async function fetchStorageInfo() {
     color: white;
     cursor: pointer;
   }
+
+  #bot-message-container {
+    padding: 10px;
+    border-radius: 5px;
+    border: 2px solid rgb(237, 222, 157);
+    background-color: rgb(237, 222, 157);
+  }
+
+  #sources-container {
+    display: flex;
+    flex-direction: column; /* Stack words vertically */
+    align-items: left; /* Center items horizontally */
+    gap: 10px; /* Space between items */
+    margin: 5px 0; /* Add this line */
+  }
+
+  #reference-container {
+    border: 2px solid lighblue;
+    background-color: lightblue;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Soft shadow for depth */
+    padding: 2px;
+    cursor: pointer;
+  }
+
+  #reference-container:hover {
+    background-color: blue;
+  }
 </style>
 
-<div>
-  <div>
-    {#each messages as { sender, message }}
-      <div><strong>{sender}:</strong> {message}</div>
+<body>
+<div id="main-container">
+  
+  <!--
+  <div id="storage-info-container">
+    <p id="storage-info">Storage information goes here</p>
+  </div>
+  -->
+
+  <div id="chat-container">
+    <div id="chat-messages">
+    {#if globalStatus !== 'OK'}
+      <div id="server-info">
+        <strong>Server status: </strong> {globalStatusMessage}
+      </div>
+    {:else if messages.length === 0}
+      <div id="server-placeholder">
+        <strong>The server is running now!</strong>
+      </div>
+    {:else}
+    {#each messages as { sender, message, references }}
+    {#if sender === 'You'}
+      <div>
+        <strong>{sender}:</strong> {message}
+      </div>
+    {:else if sender === 'Bot'}
+    <div id="bot-message-container">
+      <div>
+        <strong>{"Answer:"}:</strong> {message}
+      </div>
+      <strong>{"Sources:"}</strong>
+      <div id="sources-container">
+      {#each references as reference}
+      <div>
+      <a href={reference} target="_blank" id="reference-container">
+        {reference}
+      </a>
+      </div>
+      {/each}
+      </div>
+    </div>
+    {/if}
     {/each}
+    {/if}
+    </div>
   </div>
-  <div>
-    <input bind:value={userInput} placeholder="Type a message..." />
-    <button on:click={sendMessage}>Send</button>
+  <div id="user-input-container">
+      <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
+      <button id="send-button" on:click={sendMessage}>Send</button>
   </div>
-</div>
+  
+
+</body>

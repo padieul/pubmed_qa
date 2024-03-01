@@ -115,12 +115,12 @@ def build_references(sources):
 
     pmids = []
 
-    references = "\n\nReferences:"
+    references = ""
     for source in sources:
         pmid = str(source.metadata['pmid'])
         # Create URLs for abstracts once and without duplicates
         if pmid not in pmids:
-            url = f"\nhttps://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+            url = f"|https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
             references += url
             pmids.append(pmid)
     return references
