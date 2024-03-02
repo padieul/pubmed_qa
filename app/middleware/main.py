@@ -75,7 +75,7 @@ def initialize_rag_pipeline():
     SERVER_STATUS = "NOK"
     vector_store = opensearch_vector_store(index_name="pubmed_500_100")
     retriever = vector_store.as_retriever(search_kwargs={"k": 20, "text_field":"chunk", "vector_field":"embedding"})
-    v_retriever = VariableRetriever(vectorstore=retriever, filter_year="2018")
+    # v_retriever = VariableRetriever(vectorstore=retriever, filter_year="2018")
 
 
     # Loads the latest version of RAG prompt
@@ -87,7 +87,7 @@ def initialize_rag_pipeline():
     rag_pipeline = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=v_retriever,
+        retriever=retriever,
         return_source_documents=True,
         chain_type_kwargs={"prompt": prompt, "verbose":"True"},
         verbose=True    

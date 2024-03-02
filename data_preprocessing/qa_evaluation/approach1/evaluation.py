@@ -1,5 +1,9 @@
 import pandas as pd
+import requests
 import evaluate
+# from utils import llm_model, opensearch_vector_store, build_references, processed_output, VariableRetriever
+# from config import set_api_keys
+
 
 
 def get_references(df):
@@ -47,3 +51,45 @@ print(f"Number of Complex Questons (Generated using Dense Search for Similariy S
 print(f"Number of Complex Questons (Generated using Sparse Search for Similariy Search): {len(df_complex_sparse)}")
 print(f"Number of Complex Questons (Generated using Two Similar Chunks): {len(df_complex_2chunks)}")
 print(f"Number of Complex Questons (Generated using Three Similar Chunks): {len(df_complex_3chunks)}")
+
+# print(df_complex.head('question'))
+print(list(df_complex['question'])[0])
+# print(df_complex.loc[1, 'question'])
+# df.loc[0, 'question']
+# print(get_prediction_from_llm(df_complex[0]['question']))
+
+# def get_prediction_from_llm(question):
+#     # The URL of the endpoint where the request will be sent
+#     url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
+#     # url = f'http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent({question})}'
+    
+#     # The data to be sent in the request, as a dictionary
+#     # message = {'query_str': question}
+    
+#     # Sending a POST request to the URL with the data as JSON
+#     # Note: Ensure that the endpoint supports receiving JSON data via POST method
+#     response = requests.post(url, json=message)
+    
+#     # Check if the request was successful (status code 200)
+#     if response.status_code == 200:
+#         # Assuming the response contains JSON data with the prediction
+#         # Extracting the prediction from the response JSON
+#         prediction = response.json().get('prediction')
+#     else:
+#         # Handling cases where the request failed
+#         prediction = None
+#         print(f'Request failed with status code: {response.status_code}')
+    
+#     return prediction
+
+def get_prediction_from_llm(question):
+    url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
+    
+    response = requests.get(url)
+
+    if not response.ok:
+        raise ValueError(f'HTTP error! Status: {response.status_code}')
+
+    return response.json()['message']
+
+print(get_prediction_from_llm(list(df_complex['question'])[0]))
