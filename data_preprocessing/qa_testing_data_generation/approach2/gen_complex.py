@@ -35,34 +35,42 @@ def generate_complex_question(abstract1, abstract2):
         return "", ""
 
 def extract_unique_pairs(input_csv_path, output_csv_path):
+    # Load the CSV file, assuming no header; adjust if your file has a header
     df = pd.read_csv(input_csv_path, header=None, usecols=[0, 3, 5])
+    
+    # Assign column names for clarity
     df.columns = ['pmid', 'chunk', 'key_words']
+    
+    # Convert the 'key_words' column from string representation of lists to actual lists
     df['key_words_list'] = df['key_words'].apply(lambda x: safe_literal_eval(x))
     
+    # Use a set to store already seen pairs and ensure uniqueness
     seen_pairs = set()
     results = []
     
     for i in range(len(df) - 1):
         for j in range(i + 1, len(df)):
-            pmids = tuple(sorted([df.at[i, 'pmid'], df.at[j, 'pmid']]))
+            # Sort PMIDs to ensure uniqueness regardless of order
+            pmid1 = df.at[i, 'pmid']
+            pmid2 = df.at[j, 'pmid']
+            if pmid1 != pmid2:  # Ensure the PMIDs are different to avoid identical pairs
+                pmids = tuple(sorted([pmid1, pmid2]))
             
-            if pmids not in seen_pairs:
-                common_keywords = set(df.at[i, 'key_words_list']) & set(df.at[j, 'key_words_list'])
-                if len(common_keywords) > 15:
-                    seen_pairs.add(pmids)
-                    chunk1 = df.at[i, 'chunk']
-                    chunk2 = df.at[j, 'chunk']
-                    question, answer = generate_complex_question(chunk1, chunk2)
-                    results.append({
-                        'pmid1': df.at[i, 'pmid'],
-                        'pmid2': df.at[j, 'pmid'],
-                        'chunk1': chunk1,
-                        'chunk2': chunk2,
-                        'Complex_Question': question,
-                        'Answer': answer
-                    })
+                if pmids not in seen_pairs:
+                    common_keywords = set(df.at[i, 'key_words_list']) & set(df.at[j, 'key_words_list'])
+                    if len(common_keywords) > 10:
+                        seen_pairs.add(pmids)
+                        results.append({
+                            'pmid1': pmid1,
+                            'pmid2': pmid2,
+                            'chunk1': df.at[i, 'chunk'],
+                            'chunk2': df.at[j, 'chunk']
+                        })
     
+    # Convert the results list to a DataFrame
     results_df = pd.DataFrame(results)
+    
+    # Save the results to a CSV file
     results_df.to_csv(output_csv_path, index=False)
 
 # Paths to your input and output CSV files
