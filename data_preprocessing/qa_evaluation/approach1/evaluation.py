@@ -1,9 +1,6 @@
 import pandas as pd
 import requests
 import evaluate
-# from utils import llm_model, opensearch_vector_store, build_references, processed_output, VariableRetriever
-# from config import set_api_keys
-
 
 
 def get_references(df):
@@ -14,7 +11,50 @@ def get_references(df):
     references = df['answer'].tolist()
     references_bleu = [[reference] for reference in references]
 
-    return references, references_bleu
+    return [references, references_bleu]
+
+
+def get_prediction_from_llm(question):
+    url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
+    
+    response = requests.get(url)
+
+    if not response.ok:
+        raise ValueError(f'HTTP error! Status: {response.status_code}')
+
+    return response.json()['message']
+
+
+def modify_original_prediciton(original_predicion):
+    '''
+    This function is used to clean the original prediction by removing sources from it.
+    As our references do not contain sources.
+    '''
+    index = original_predicion.find("_|") # find the index of "_|"
+
+    # If "Sources:" is found, remove everything starting from that index
+    if index != -1: # if "Sources:" is present in the original prediction
+        modified_prediciton = original_predicion[:index] # we keep everyhing until "_|"
+    
+    else:
+        modified_prediciton = original_predicion # else keep the original prediction
+
+    return modified_prediciton
+
+
+def get_predictions(df):
+    predictions = []
+    for question in df['question']:
+        # print(question)
+        original_prediction = get_prediction_from_llm(question)
+        prediction = modify_original_prediciton(original_prediction)
+        predictions.append(prediction)
+    return predictions
+
+bleu = evaluate.load("bleu")
+rouge = evaluate.load("rouge")
+meteor = evaluate.load('meteor')
+bertscore = evaluate.load("bertscore")
 
 # here we are getting the test dataset for evaluation
 test_set = pd.read_csv('data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv', delimiter='\t', dtype=str)
@@ -52,44 +92,72 @@ print(f"Number of Complex Questons (Generated using Sparse Search for Similariy 
 print(f"Number of Complex Questons (Generated using Two Similar Chunks): {len(df_complex_2chunks)}")
 print(f"Number of Complex Questons (Generated using Three Similar Chunks): {len(df_complex_3chunks)}")
 
-# print(df_complex.head('question'))
-print(list(df_complex['question'])[0])
-# print(df_complex.loc[1, 'question'])
-# df.loc[0, 'question']
-# print(get_prediction_from_llm(df_complex[0]['question']))
+# SOME DEBUGGING CODE HERE
+# print(get_predictions(df_complex))
+# print(get_predictions(df_complex))
+# print(get_predictions(df_confirmation))
+prediction = get_prediction_from_llm("How does chiral analysis of synthetic cathinones in forensic laboratories contribute to drug intelligence and the development of better treatment for overdose or addiction?")
+print(modify_original_prediciton(prediction))
+# print(get_references(df_confirmation)[0])
+# print(get_references(df_confirmation)[1])
 
-# def get_prediction_from_llm(question):
-#     # The URL of the endpoint where the request will be sent
-#     url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
-#     # url = f'http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent({question})}'
-    
-#     # The data to be sent in the request, as a dictionary
-#     # message = {'query_str': question}
-    
-#     # Sending a POST request to the URL with the data as JSON
-#     # Note: Ensure that the endpoint supports receiving JSON data via POST method
-#     response = requests.post(url, json=message)
-    
-#     # Check if the request was successful (status code 200)
-#     if response.status_code == 200:
-#         # Assuming the response contains JSON data with the prediction
-#         # Extracting the prediction from the response JSON
-#         prediction = response.json().get('prediction')
-#     else:
-#         # Handling cases where the request failed
-#         prediction = None
-#         print(f'Request failed with status code: {response.status_code}')
-    
-#     return prediction
 
-def get_prediction_from_llm(question):
-    url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
-    
-    response = requests.get(url)
+# HERE WE ARE COMPUTING BLEU RESULTS 
+bleu_results_confirmation = bleu.compute(predictions=get_predictions(df_confirmation), references=get_references(df_confirmation)[1])
+bleu_results_factoid_type = bleu.compute(predictions=get_predictions(df_factoid_type), references=get_references(df_factoid_type)[1])
+bleu_results_list_type = bleu.compute(predictions=get_predictions(df_list_type), references=get_references(df_list_type)[1])
+bleu_results_causal = bleu.compute(predictions=get_predictions(df_causal), references=get_references(df_causal)[1])
+bleu_results_hypothetical = bleu.compute(predictions=get_predictions(df_hypothetical), references=get_references(df_hypothetical)[1])
 
-    if not response.ok:
-        raise ValueError(f'HTTP error! Status: {response.status_code}')
+bleu_results_complex = bleu.compute(predictions=get_predictions(df_complex), references=get_references(df_complex)[1])
+bleu_results_complex_dense = bleu.compute(predictions=get_predictions(df_complex_dense), references=get_references(df_complex_dense)[1])
+bleu_results_complex_sparse = bleu.compute(predictions=get_predictions(df_complex_sparse), references=get_references(df_complex_sparse)[1])
+bleu_results_complex_2chunks = bleu.compute(predictions=get_predictions(df_complex_2chunks), references=get_references(df_complex_2chunks)[1])
+bleu_results_complex_3chunks = bleu.compute(predictions=get_predictions(df_complex_3chunks), references=get_references(df_complex_3chunks)[1])
 
-    return response.json()['message']
 
-print(get_prediction_from_llm(list(df_complex['question'])[0]))
+# HERE WE ARE COMPUTING ROUGE RESULTS
+rouge_results_confirmation = rouge.compute(predictions=get_predictions(df_confirmation), 
+                                           references=get_references(df_confirmation)[0])
+rouge_results_factoid_type = rouge.compute(predictions=get_predictions(df_factoid_type), 
+                                           references=get_references(df_factoid_type)[0])
+rouge_results_list_type = rouge.compute(predictions=get_predictions(df_list_type), 
+                                           references=get_references(df_list_type)[0])
+rouge_results_causal = rouge.compute(predictions=get_predictions(df_causal), 
+                                           references=get_references(df_causal)[0])
+rouge_results_hypothetical = rouge.compute(predictions=get_predictions(df_hypothetical), 
+                                           references=get_references(df_hypothetical)[0])
+
+rouge_results_complex = rouge.compute(predictions=get_predictions(df_complex), 
+                                           references=get_references(df_complex)[0])
+rouge_results_complex_dense = rouge.compute(predictions=get_predictions(df_complex_dense), 
+                                           references=get_references(df_complex_dense)[0])
+rouge_results_complex_sparse = rouge.compute(predictions=get_predictions(df_complex_sparse), 
+                                           references=get_references(df_complex_sparse)[0])
+rouge_results_complex_2chunks = rouge.compute(predictions=get_predictions(df_complex_2chunks), 
+                                           references=get_references(df_complex_2chunks)[0])
+rouge_results_complex_3chunks = rouge.compute(predictions=get_predictions(df_complex_3chunks), 
+                                           references=get_references(df_complex_3chunks)[0])
+
+# HERE WE ARE COMPUTING BERTScore
+bertscore_results_confirmation = bertscore.compute(predictions=get_predictions(df_confirmation), 
+                                                   references=get_references(df_confirmation)[0], lang="en")
+bertscore_results_factoid_type = bertscore.compute(predictions=get_predictions(df_factoid_type), 
+                                                   references=get_references(df_factoid_type)[0], lang="en")
+bertscore_results_list_type = bertscore.compute(predictions=get_predictions(df_list_type), 
+                                                   references=get_references(df_list_type)[0], lang="en")
+bertscore_results_causal = bertscore.compute(predictions=get_predictions(df_causal), 
+                                                   references=get_references(df_causal)[0], lang="en")
+bertscore_results_hypothetical = bertscore.compute(predictions=get_predictions(df_hypothetical), 
+                                                   references=get_references(df_hypothetical)[0], lang="en")
+
+bertscore_results_complex = bertscore.compute(predictions=get_predictions(df_complex), 
+                                                   references=get_references(df_complex)[0], lang="en")
+bertscore_results_complex_dense = bertscore.compute(predictions=get_predictions(df_complex_dense), 
+                                                   references=get_references(df_complex_dense)[0], lang="en")
+bertscore_results_complex_sparse = bertscore.compute(predictions=get_predictions(df_complex_sparse), 
+                                                   references=get_references(df_complex_sparse)[0], lang="en")
+bertscore_results_complex_2chunks = bertscore.compute(predictions=get_predictions(df_complex_2chunks), 
+                                                   references=get_references(df_complex_2chunks)[0], lang="en")
+bertscore_results_complex_3chunks = bertscore.compute(predictions=get_predictions(df_complex_3chunks), 
+                                                   references=get_references(df_complex_3chunks)[0], lang="en")
