@@ -16,13 +16,15 @@
   - [Test Dataset Generation](#test-dataset-generation)
 
 ## Overview
-<div style="text-align:center"><img src="images/RAG.png" /></div>.
+<div style="text-align:center"><img src="images/RAG.png" /></div>
 
 The architecture of the project consists of four components that are containerized in Docker containers and interconnected using Docker internal network that is also accessible using the local host computer. The four components are as follows:
 
 - Front-end web interface to receive user queries
 - Middleware powered by FastAPI to retrieve the documents from OpenSearch, filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
 - OpenSearch for document and vector storage, indexing and retrieval
+
+To the run the project for testing, please follow the steps in the [`installation_instructions.md`](installation_instructions.md)
 
 
 ## Data Preparation
