@@ -14,6 +14,8 @@
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
+  - [Contributions](#contributions)
+    - [Abdulghani Almasri](#abdulghani-almasri)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>
@@ -419,4 +421,4 @@ Complex Question Generation:
 6. Creating helper functions that are used to initialize the language model, initialize the vector store, build the URLs of the source articles and process the answer received from the language model, as in [`utils.py`](app/middleware/utils.py).
 7. Creating the RAG pipeline with the most recent RAG prompt from [`LangChain`](https://www.langchain.com/), setting up the retriever with the proper parameters and experimenting with the metadata of the returned source documents.
 8. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to find the model that we can use in our project.
-9. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions in [`installation_instructions.md`](installation_instructions.md)
+9. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions in [`installation_instructions.md`](installation_instructions.md), and creating the high-level diagram of the project.
