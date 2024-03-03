@@ -183,25 +183,20 @@ The Frontend Framework consists of two main Svelte files crucial for the operati
 ### File Descriptions
 #### App.svelte
 The core component of the application, setting up the layout, styles, and integrating the Chatbot.svelte component. It is crucial for initializing the application and providing a container for the chatbot's functionality.
-
 ##### Key Features:
 Application layout initialization.
 Global styles and themes inclusion.
 Integration of the Chatbot.svelte component.
-
 #### Chatbot.svelte
 Focuses on the chatbot functionality, including the user interface and interaction logic. It allows for user interaction through message input and displays chatbot responses.
-
 ##### Key Features:
 User message input field.
 Display area for user and chatbot messages.
 Logic for processing user input and generating responses.
 Getting Started
-
 ### Requirements
 [`Node.js`](https://nodejs.org/en) (Version 12.x or higher)
 [`npm`](https://docs.npmjs.com/) (Node Package Manager)
-
 #### To run this application:
 Install Dependencies: In the project root, run npm install to install dependencies.
 Run the Application: Execute npm run dev to start the server. Access the app at http://localhost:5000.
@@ -209,6 +204,9 @@ Interact with the Chatbot: Use the web interface to communicate with the chatbot
 
 ### Screenshots
 Here are some screenshots of the frontend interface to give you a glimpse of what to expect:
+<div style="text-align:center"><img src="images/backend_init.png" /></div>
+<div style="text-align:center"><img src="images/server_ready.png" /></div>
+<div style="text-align:center"><img src="images/question.png" /></div>
 
 ## Text Generation
 
