@@ -155,7 +155,7 @@ async def retrieve_documents(body: RequestBody):
     query_str = body.query_str
     filter_data = {
         "title": str(filter.title) if filter.title else "",
-        "year_range": [str(year) for year in filter.year_range] if filter.year_range else [],
+        "years": [str(year) for year in filter.year_range] if filter.year_range else [],
         "keywords": [str(keyword) for keyword in filter.keywords] if filter.keywords else []
         }
    

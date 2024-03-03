@@ -90,20 +90,32 @@ class RetrievalFilter:
         return self._filter_type
 
     def _apply_title_filter(self, doc_list: List[Document]) -> List[Document]:
-        if not self._target_title.strip():  # Check if title is empty or whitespace
+        if not isinstance(self._target_title, str) or not self._target_title.strip():  # Check if title is a string and not empty or whitespace
             return doc_list
         return [doc for doc in doc_list if self._target_title.lower() in doc.metadata["title"].lower()]
 
     def _apply_years_filter(self, doc_list: List[Document]) -> List[Document]:
-        if not self._target_years:  # Check if years list is empty
+        if not isinstance(self._target_years, list) or not all(isinstance(year, str) for year in self._target_years):  # Check if years is a list of strings
             return doc_list
+        
+        # if self._target_years is a list of empty strings, return doc_list
+        if all(not year for year in self._target_years):
+            return doc_list
+
         return [doc for doc in doc_list if str(doc.metadata["year"]) in self._target_years]
 
     def _apply_keywords_filter(self, doc_list: List[Document]) -> List[Document]:
-        if not self._target_keywords:  # Check if keywords list is empty
+        if not isinstance(self._target_keywords, list) or not all(isinstance(keyword, str) for keyword in self._target_keywords):  # Check if keywords is a list of strings
             return doc_list
+        
+        # if self._target_years is a list of empty strings, return doc_list
+        if all(not keyword for keyword in self._target_keywords):
+            return doc_list
+
         return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
     
+
+
     def apply(self, doc_list: List[Document]) -> List[Document]:
 
         if self._filter_type == "no_filter":
