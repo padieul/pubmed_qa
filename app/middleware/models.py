@@ -90,15 +90,20 @@ class RetrievalFilter:
         return self._filter_type
 
     def _apply_title_filter(self, doc_list: List[Document]) -> List[Document]:
-        
+        if not self._target_title.strip():  # Check if title is empty or whitespace
+            return doc_list
         return [doc for doc in doc_list if self._target_title.lower() in doc.metadata["title"].lower()]
-    
-    def _apply_years_filter(self, doc_list: List[Document]) -> List[Document]:
-        return [doc for doc in doc_list if str(doc.metadata["year"]) in self._target_years]
-    
-    def _apply_keywords_filter(self, doc_list: List[Document]) -> List[Document]:
-        return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
 
+    def _apply_years_filter(self, doc_list: List[Document]) -> List[Document]:
+        if not self._target_years:  # Check if years list is empty
+            return doc_list
+        return [doc for doc in doc_list if str(doc.metadata["year"]) in self._target_years]
+
+    def _apply_keywords_filter(self, doc_list: List[Document]) -> List[Document]:
+        if not self._target_keywords:  # Check if keywords list is empty
+            return doc_list
+        return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
+    
     def apply(self, doc_list: List[Document]) -> List[Document]:
 
         if self._filter_type == "no_filter":
