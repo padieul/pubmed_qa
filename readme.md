@@ -43,7 +43,7 @@ Under [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) there are two c
 esearch -db pubmed -query "intelligence [title/abstract] hasabstract" | efetch -format uid >articles_ids.csv
 ```
 
-The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data_v2.py`](data_preprocessing/retrieve_pubmed_data_v2.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
+The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data.py`](data_preprocessing/retrieve_pubmed_data.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
 
  ```Python
  Entrez.efetch(db="pubmed", id=idlist[i:j], rettype='medline', retmode='text')
@@ -64,7 +64,7 @@ For chunking, we used `RecursiveCharacterTextSplitter` in [`LangChain`](https://
     chunks = text_splitter.split_text(str(row['Abstract']))
 ```
 
-The chunking is done using the script [`data_chunking_v2.py`](data_preprocessing/data_chunking_v2.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
+The chunking is done using the script [`data_chunking.py`](data_preprocessing/data_chunking.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
 
 ### Data Embedding
 
@@ -83,7 +83,7 @@ angle.set_prompt(prompt=Prompts.C)
 vec = angle.encode({'text': 'hello world'}, to_numpy=True)
 ```
 
-We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
+We created the Python script [`data_embedding.py`](data_preprocessing/data_embedding.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
 
 
 > We have created a new embedding class for [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) model as it is natively supported by [`LangChain`](https://www.langchain.com/), we implemented this new functionality in [`models.py`](app/middleware/models.py).
