@@ -38,12 +38,25 @@
   }
 }
   
+async function sendToBackend(message, title, yearRange, keywords) {
+    // Prepare the request body
+    const body = {
+        filter: {
+            title: title,
+            year_range: yearRange, 
+            keywords: keywords
+        },
+        query_str: message
+    };
 
-
-
-async function sendToBackend(message) {
-    // Using fetch API to send a GET request to the FastAPI endpoint
-    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent(message)}`);
+    // Using fetch API to send a POST request to the FastAPI endpoint
+    const response = await fetch('http://localhost:8000/retrieve_documents_dense_f', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -51,6 +64,19 @@ async function sendToBackend(message) {
 
     return await response.json();
 }
+
+
+
+/* async function sendToBackend(message) {
+    // Using fetch API to send a GET request to the FastAPI endpoint
+    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent(message)}`);
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json(); 
+}*/
 
 function appendMessage(sender, message) {
     const chatMessages = document.getElementById('chat-messages');
@@ -96,7 +122,7 @@ function extractReferences(message) {
 
       try {
         // TODO: Add logic to send the message to the backend and get the bot's response
-        const response = await sendToBackend(userInput);
+        const response = await sendToBackend(userInput, "", [], []);
         //const botResponse = response.message;
         const responseText = response.message 
         
