@@ -1,4 +1,5 @@
 import pandas as pd
+import math
 import csv
 import requests
 
@@ -74,6 +75,7 @@ test_set = pd.read_csv('data_preprocessing/qa_testing_data_generation/approach1/
 file_path_refs_preds = "data_preprocessing/qa_evaluation/approach1/references_predictions.csv"
 
 for index in test_set.index:
+    # print("INDEX:", index) # for debugging purposes
     record = test_set.loc[index]
     question = record['question']
     reference = record['answer']
@@ -87,10 +89,16 @@ for index in test_set.index:
         # However, these question types are essential to know how our model performs in different scenarios
         if record['similarity_search'] == "Sparse": # Sparse search is used while question generation
             write_to_csv(file_path_refs_preds, question, reference, prediction, "complex_sparse")
+            print("COMPLEX_SPARSE")
         elif record['similarity_search'] == "Dense":
             write_to_csv(file_path_refs_preds, question, reference, prediction, "complex_dense")
+            print("COMPLEX_DENSE")
 
-        if record['pmid2'].notna() and record['pmid3'].isna():
+        print(record['pmid2'], type(record['pmid2']))
+        print(record['pmid3'], type(record['pmid3']))
+        if isinstance(record['pmid2'], str) and not isinstance(record['pmid3'], str):
             write_to_csv(file_path_refs_preds, question, reference, prediction, "complex_2chunks")
-        elif record['pmid2'].notna() and record['pmid3'].notna():
+            print("COMPLEX 2 CHUNKS")
+        elif isinstance(record['pmid2'], str) and isinstance(record['pmid3'], str):
             write_to_csv(file_path_refs_preds, question, reference, prediction, "complex_3chunks")
+            print("COMPLEX 3 CHUNKS")

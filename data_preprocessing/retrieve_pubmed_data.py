@@ -1,106 +1,131 @@
-import requests
-import xml.etree.ElementTree as ET
-
-from tqdm import tqdm
-
-# Replace with your own API key if registered
-api_key = "4aac4074dc4662953a02c33abf21d1232908"
-
-# Define the query parameters
-query = "intelligence"
-start_date = "2013/01/01"
-end_date = "2023/12/31"
-
-# Construct the PubMed E-Utilities API URL for the ESearch request to get the list of PMIDs
-esearch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&mindate={start_date}&maxdate={end_date}&api_key={api_key}"
-
-"""
-
-# Make the ESearch API request to get the list of PMIDs
-response = requests.get(esearch_url)
-
-if response.status_code == 200:
-    # Parse the XML response to extract PMIDs
-    root = ET.fromstring(response.content)
-    pmids = [element.text for element in root.findall(".//Id")]
-
-    # Construct the URL for the ESummary request to get metadata and abstracts
-    pmids_str = ",".join(pmids)
-    esummary_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmids_str}&api_key={api_key}"
-
-    # Make the ESummary API request to get metadata and abstracts
-    response = requests.get(esummary_url)
-
-    if response.status_code == 200:
-        # Parse the XML response to extract metadata and abstracts
-        root = ET.fromstring(response.content)
-        for doc in root.findall(".//DocSum"):
-            abstract = None
-            try:
-                pmid = doc.find(".//Id").text
-                title = doc.find(".//Item[@Name='Title']").text
-                authors = doc.find(".//Item[@Name='AuthorList']").text
-                pub_date = doc.find(".//Item[@Name='PubDate']").text
-                abstract = doc.find(".//Item[@Name='Abstract']").text
-            except:
-                print("NO DATA!")
-
-            # Print or store the metadata and abstract as needed
-            print(f"PMID: {pmid}")
-            print(f"Title: {title}")
-            print(f"Authors: {authors}")
-            print(f"Publication Date: {pub_date}")
-            if not abstract == None:
-                print(f"Abstract: {abstract}\n")
-    else:
-        print(f"ESummary request failed with status code: {response.status_code}")
-else:
-    print(f"ESearch request failed with status code: {response.status_code}")
-"""
-
-from metapub import PubMedFetcher
+from Bio import Entrez
+from Bio import Medline
 import pandas as pd
+import csv
+import re
 
-# Initialize the PubMedFetcher
-fetch = PubMedFetcher()
 
-# Define your query and the number of articles you want to retrieve
-query = "intelligence"
-num_of_articles = 5 #177505  # You can adjust this number as needed
+### The IDs of the articles are stored in the articles_ids.csv using Linux command:
+### esearch -db pubmed -query "intelligence [title/abstract] hasabstract" | efetch -format uid >articles_ids.csv
 
-# Get the PMIDs for the articles matching the query and date range
-pmids = fetch.pmids_for_query(query, retmax=num_of_articles, datetype='pdat', mindate='2013', maxdate='2023')
 
-# Create dictionaries to store metadata
-titles = {}
-abstracts = {}
-authors = {}
-years = {}
-journals = {}
+def scraping_pubmed(email, ids_file):
+    
+    # Provide email address for PubMed to contact you in case of problems
+    Entrez.email = email
+    
 
-# Loop through PMIDs and fetch metadata for each article
-for pmid in tqdm(pmids):
-    article = fetch.article_by_pmid(pmid)
-    titles[pmid] = article.title
-    abstracts[pmid] = article.abstract
-    authors[pmid] = article.authors
-    years[pmid] = article.year
-    journals[pmid] = article.journal
-    # more metadaa can be added as needed
+    # Import the IDs of the articles exported using EDirect utilities  
+    with open(ids_file, newline='') as f:
+        reader = csv.reader(f)
+        idlist = list(reader)
+        
+      
+    # Fetch the articles in batches of 10000 (the maximum allowed by PubMed at onces)
+    records = []
+    for i in range(0, len(idlist), 10000):
+        j = i + 10000
+        if j >= len(idlist):
+            j = len(idlist)
+            
+        handle=Entrez.efetch(db="pubmed", id=idlist[i:j],
+                             rettype='medline', retmode='text')
+        record=Medline.parse(handle)
+ 
+        
+        for r in record:
+            records.append(r)    
 
-# Create DataFrames from the dictionaries
-Title = pd.DataFrame(list(titles.items()), columns=['pmid', 'Title'])
-Abstract = pd.DataFrame(list(abstracts.items()), columns=['pmid', 'Abstract'])
-Author = pd.DataFrame(list(authors.items()), columns=['pmid', 'Author'])
-Year = pd.DataFrame(list(years.items()), columns=['pmid', 'Year'])
-Journal = pd.DataFrame(list(journals.items()), columns=['pmid', 'Journal'])
+    # Limit the scope of the retrieval to the period between 2013 and 2023 
+    list_of_years = [str(year) for year in range(2013, 2023 + 1)]
 
-# Merge DataFrames to create a single DataFrame with metadata
-data_frames = [Title, Abstract, Author, Year, Journal]
-df_merged = pd.concat(data_frames, axis=1)
+    # Choosing the attributes to be extracted from PubMed       
+    header = ['PMID', 'Title', 'Abstract', 'Key_words', 'Authors', 'Journal', 'Year', 'Month', 'Source','Country']
+    
+    with open('exported_data.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        
+        # write the header
+        writer.writerow(header)
+        
+        # write the data
+        for paper in records:
+            
+            try:
+                PMID = paper['PMID']
+            except:
+                PMID = None
+                
+            try:
+                Title = paper['TI']
+            except:
+                try:
+                    Title = paper['TT'] 
+                except:
+                    try:
+                        Title = paper['BTI']
+                    except:
+                        Title = None
+            
+            try:
+                Abstract = paper['AB']
+            except:
+                Abstract = None
+            
+            try:
+                Key_words = paper['MH']
+            except:
+                try:
+                    Key_words = paper['OT']
+                except:
+                    Key_words = None
+                    
+            try:
+                Authors = paper['FAU']
+            except:
+                try:
+                    Authors = paper['FED']
+                except:
+                    Authors = None
+                
+            try:
+                Journal = paper['TA']
+            except:
+                Journal = None
+        
+            try:
+                Year = paper['EDAT'].split('/')[0]   
+                if Year not in list_of_years:
+                    continue             
+            except:
+                Year = None
+            
+            try:
+                Month = paper['EDAT'].split('/')[1]
+            except:
+                Month = None
+            
+            try:
+                Source = paper['SO']
+            except:
+                Source = None
+            
+            try:
+                Country = paper['AD'][0].split(',')[-1][:-1].lstrip()
+                regex = re.compile('[\w\.-]+@[\w\.-]+(\.[\w]+)+')
+                if re.search(regex, Country):
+                    Country = Country.split(".")[0]
+                else:
+                    Country = Country              
+                
+            except:
+                Country = None
+            
+            data = [PMID, Title, Abstract, Key_words, Authors, Journal, Year, Month, Source, Country]
+            writer.writerow(data)
+            
+    df = pd.read_csv('exported_data.csv')
+    print('A total of {} articles were retrieved from PubMed".'.format(df.shape[0]))
 
-# Save the DataFrame to a CSV file
-df_merged.to_csv('pubmed_intelligence_articles.csv', index=False)
-
-# Display the DataFrame
-print(df_merged)
+if __name__ == "__main__":
+    scraping_pubmed('a-almasri@outlook.com', 'articles_ids.csv')

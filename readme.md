@@ -14,15 +14,19 @@
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
+  - [Contributions](#contributions)
+    - [Abdulghani Almasri](#abdulghani-almasri)
 
 ## Overview
-<div style="text-align:center"><img src="images/RAG.png" /></div>.
+<div style="text-align:center"><img src="images/RAG.png" /></div>
 
-The architecture of the project consists of four components that are containerized in Docker containers and interconnected using Docker internal network that is also accessible using the local host computer. The four components are as follows:
+The architecture of the project consists of four components that are containerized in [`Docker`](https://www.docker.com/) containers and interconnected using [`Docker`](https://www.docker.com/) internal network that is also accessible using the local host computer. The four components are as follows:
 
 - Front-end web interface to receive user queries
 - Middleware powered by FastAPI to retrieve the documents from OpenSearch, filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
 - OpenSearch for document and vector storage, indexing and retrieval
+
+To the run the project for testing, please follow the steps in the [`installation_instructions.md`](installation_instructions.md)
 
 
 ## Data Preparation
@@ -41,7 +45,7 @@ Under [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/) there are two c
 esearch -db pubmed -query "intelligence [title/abstract] hasabstract" | efetch -format uid >articles_ids.csv
 ```
 
-The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data_v2.py`](data_preprocessing/retrieve_pubmed_data_v2.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
+The article IDs in [`articles_ids.csv`](articles_ids.csv) are then used as an input to the Python script [`retrieve_pubmed_data.py`](data_preprocessing/retrieve_pubmed_data.py) for the actual retrieval of articles, inside this script we used `efetch` in the following format:
 
  ```Python
  Entrez.efetch(db="pubmed", id=idlist[i:j], rettype='medline', retmode='text')
@@ -62,7 +66,7 @@ For chunking, we used `RecursiveCharacterTextSplitter` in [`LangChain`](https://
     chunks = text_splitter.split_text(str(row['Abstract']))
 ```
 
-The chunking is done using the script [`data_chunking_v2.py`](data_preprocessing/data_chunking_v2.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
+The chunking is done using the script [`data_chunking.py`](data_preprocessing/data_chunking.py) which takes the abstracts we downloaded from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/), chunk them and save them in a new CSV file.
 
 ### Data Embedding
 
@@ -81,7 +85,7 @@ angle.set_prompt(prompt=Prompts.C)
 vec = angle.encode({'text': 'hello world'}, to_numpy=True)
 ```
 
-We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
+We created the Python script [`data_embedding.py`](data_preprocessing/data_embedding.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
 
 
 > We have created a new embedding class for [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) model as it is natively supported by [`LangChain`](https://www.langchain.com/), we implemented this new functionality in [`models.py`](app/middleware/models.py).
@@ -404,3 +408,17 @@ Complex Question Generation:
   
 
     [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
+
+## Contributions
+
+### Abdulghani Almasri
+
+1. Collecting abstracts from [`PubMed`](https://pubmed.ncbi.nlm.nih.gov/) for the years between 2013 and 2023 that have the word `intelligence` in the abstract or in the title using [`EDirect`](https://www.ncbi.nlm.nih.gov/books/NBK179288/).
+2. Chunking data with [`LangChain`](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter) `RecursiveCharacterTextSplitter` and experimenting with information retrieval from OpenSearch using different chunk sizes, 500, 800 and 1100 characters.
+3. Embedding data chunks with [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) model using [`Google Colab`](https://colab.google/).
+4. Setting up [`OpenSearch`](https://opensearch.org/) and [`OpenSearch Dashboards`](https://opensearch.org/docs/latest/dashboards/) [`Docker`](https://www.docker.com/) containers, and creating the [`k-NN`](https://opensearch.org/docs/latest/search-plugins/knn/index/) index for vector storage.
+5. Extending [`LangChain`](https://www.langchain.com/) embedding functions with a new class that wrap the [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) model so it can be used in the RAG pipeline, as in [`models.py`](app/middleware/models.py).
+6. Creating helper functions that are used to initialize the language model, initialize the vector store, build the URLs of the source articles and process the answer received from the language model, as in [`utils.py`](app/middleware/utils.py).
+7. Creating the RAG pipeline with the most recent RAG prompt from [`LangChain`](https://www.langchain.com/), setting up the retriever with the proper parameters and experimenting with the metadata of the returned source documents.
+8. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to find the model that we can use in our project.
+9. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions in [`installation_instructions.md`](installation_instructions.md), and creating the high-level diagram of the project.

@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain.chains import RetrievalQA
 from langchain import hub
 
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
 from utils import llm_model, opensearch_vector_store, build_references, processed_output
 from config import set_api_keys
 from models import VariableRetriever, RetrievalFilter
@@ -12,6 +15,8 @@ vectore_store = None
 retriever = None
 prompt = None
 llm = None
+
+filtering = False
 
 
 
@@ -76,7 +81,9 @@ def initialize_rag_pipeline():
     SERVER_STATUS = "NOK"
     vector_store = opensearch_vector_store(index_name="pubmed_500_100")
     retriever = vector_store.as_retriever(search_kwargs={"k": 20, "text_field":"chunk", "vector_field":"embedding"})
-    default_retriever = VariableRetriever(vectorstore=retriever, retrieval_filter=RetrievalFilter({"type":"none"}))
+    default_filter = {"title": "", "years": [], "keywords": []}
+    print(default_filter)
+    default_retriever = VariableRetriever(vectorstore=retriever, retrieval_filter=RetrievalFilter(default_filter))
 
     # Loads the latest version of RAG prompt
     SERVER_STATUS_MESSAGE = "Setting up RAG pipeline..."
@@ -128,21 +135,62 @@ def read_root(message: str):
     return {"message": response_message}
 
 
-@app.get("/retrieve_documents_dense")
-async def retrieve_documents(query_str: str):
+class Filter(BaseModel):
+    title: Optional[str] = Field(None, description="The title to filter by")
+    year_range: Optional[List[str]] = Field(None, description="The range of years to filter by")
+    keywords: Optional[List[str]] = Field(None, description="The keywords to filter by")
+
+class RequestBody(BaseModel):
+    filter: Filter
+    query_str: str
+
+@app.post("/retrieve_documents_dense_f")
+async def retrieve_documents(body: RequestBody):
     """
     A complete end-to-end RAG to answer user questions
     """
-    """
-    filter_str = query_str.split("|")[0]
-    query_str = query_str.split("|")[1]
-     
-    if filter_str == "2018-2020":
-        reinitialize_rag_pipeline_retriever({"type":"years", "years":["2018", "2019", "2020"]})
-    """
+    global filtering
 
+    filter = body.filter
+    query_str = body.query_str
+    filter_data = {
+        "title": str(filter.title) if filter.title else "",
+        "years": [str(year) for year in filter.year_range] if filter.year_range else [],
+        "keywords": [str(keyword) for keyword in filter.keywords] if filter.keywords else []
+        }
+   
+    # all values are empty -> no filtering
+    if all(not value for value in filter_data.values()):
+        print("---FILTERING: EVERYTHING IS EMPTY ---")
+        if not filtering:
+            print("---FILTERING: ALREADY DEFAULT ---")
+            # no need to reinitialize the retriever because 
+            # it is already the default retriever
+            answer = rag_pipeline.invoke({"query": query_str}) 
+        else:
+            print("---FILTERING: SETTING TO DEFAULT ---")
+            default_filter = {"title": "", "years": [], "keywords": []}
+            reinitialize_rag_pipeline_retriever(default_filter)
+            answer = rag_pipeline.invoke({"query": query_str}) 
+            filtering = False
+    else:
+        print("---FILTERING: SETTING TO CUSTOM ---")
+        reinitialize_rag_pipeline_retriever(filter_data)
+        answer = rag_pipeline.invoke({"query": query_str}) 
+        filtering = True
+
+    output = processed_output(answer["result"])
+    return {"message": output + "_" + build_references(answer["source_documents"])}
+
+
+
+
+@app.get("/retrieve_documents_dense")
+async def retrieve_documents(query_str: str):
+    """
+    OLD implementation: A complete end-to-end RAG to answer user questions
+    """
     answer = rag_pipeline.invoke({"query": query_str})  
-
     output = processed_output(answer["result"])
     
     return {"message": output + "_" + build_references(answer["source_documents"])}

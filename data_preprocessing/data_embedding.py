@@ -1,40 +1,67 @@
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+from angle_emb import AnglE, Prompts
 from tqdm import tqdm
 import csv
+import os, sys
 
 
-# Import chunked data
-df = pd.read_csv('Project\\data\\exported_data_with_chunks.csv')
-
-# Drop abstracts with NaN values 
-df = df.dropna(subset=['Abstract'])
-
-# Import the embedding model
-model = SentenceTransformer('all-mpnet-base-v2')
+# This script is to generate embeddings for the segmented abstracts using AnglE embeddings
 
 
-# Embed the chunks between the start and end row (we do embeddings in batches as it task a lot of time)
-start_row = 6000
-end_row = 10000
+def embed_data(source_file: str=None, destination_file: str=None, start_index: int=0, end_index: int=0) -> None:
+    '''
+    A helper function to embed the chunked data retrieved from PubMed
 
-rows_list = []
+    Parameters:
+        source_file (str): the location of the source csv file 
+        destination_folder (str): the location of the produced file
+        start_index (int): the start index in the input file to start embedding
+        end_index (int): the end index in the input file where to stop embedding 
+    '''
 
-for index, row in tqdm(df.iterrows(), total=end_row, desc='Embedding data'):    
+    # Source file is required
+    if source_file is None:
+        return
     
-    if index < start_row:
-        continue
-    if index == end_row:
-        break
+    # Import the data that we exported from PubMed
+    df = pd.read_csv(source_file)
 
-    embedding = model.encode(row['Chunk']).tolist()
+    # Drop abstracts with NaN values 
+    df = df.dropna(subset=['abstract'])
 
-    rows_list.append([row['PMID'], row['Title'], row['Abstract'], row['Chunk_id'], row['Chunk'], embedding, row['Key_words'], row['Authors'], row['Journal'], row['Year'], row['Month'], row['Source'], row['Country']])
+    # Initialize AnglE embedding model
+    angle = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+    angle.set_prompt(prompt=Prompts.C)   
+
+    rows_list = []
+
+    for index, row in tqdm(df.iterrows(), total=end_index, desc='Embedding data'):    
+    
+        if index < start_index:
+            continue
+        if index == end_index:
+            break        
+
+        embedding = angle.encode({'text': row['chunk']})
+
+        embedding = embedding[0].tolist()
+
+        rows_list.append([row['pmid'], row['title'], row['chunk_id'], row['chunk'], embedding, row['key_words'], row['authors'], row['journal'], row['year'], row['month'], row['source'], row['country']])
 
 
-df_save = pd.DataFrame(rows_list, columns=["pmid", "title", "abstract", "chunk_id", "chunk", "embedding", "key_words", "authors", "journal", "year", "month", "source", "country"])
+    df_save = pd.DataFrame(rows_list, columns=["pmid", "title", "chunk_id", "chunk", "embedding", "key_words", "authors", "journal", "year", "month", "source", "country"])
+    
+
+    if os.path.exists(destination_file):
+        df_save.to_csv(destination_file, mode='a', index=False, header=False)
+    else:
+        df_save.to_csv(destination_file,index=False)
 
 
-# Append the data to the existing embeddings file
-# For the first batch use df_save.to_csv('Project\\data\\data_embeddings.csv',index=False)
-df_save.to_csv('Project\\data\\data_embeddings.csv', mode='a', index=False, header=False)
+if __name__ == "__main__":
+
+    source_file = os.path.join(sys.path[0], "data\\data_chunks_800_100.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_chunks_800_100.csv")
+    destination_file = os.path.join(sys.path[0], "data\\data_embeddings_800_100.csv") if os.name == "nt" else os.path.join(sys.path[0], "data/data_embeddings_800_100.csv")
+
+    
+    embed_data(source_file=source_file, destination_file=destination_file, start_index=2000, end_index=3000)

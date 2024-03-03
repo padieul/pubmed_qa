@@ -1,5 +1,11 @@
 <!-- src/Chatbot.svelte -->
 <script>
+
+  let showFilters = false; // To toggle filter visibility
+  let title = "";
+  let yearRange = "";
+  let keywords = "";
+
   let messages = [];
   let userInput = '';
   let sender = '';
@@ -38,12 +44,25 @@
   }
 }
   
+async function sendToBackend(message, _title, _yearRange, _keywords) {
+    // Prepare the request body
+    const body = {
+      filter: {
+        title: _title,
+        years: _yearRange.toString().split(',').map(s => s.trim()), // Assuming yearRange is "start-end"
+        keywords: _keywords.toString().split(',').map(k => k.trim())
+        },
+        query_str: message
+    };
 
-
-
-async function sendToBackend(message) {
-    // Using fetch API to send a GET request to the FastAPI endpoint
-    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent(message)}`);
+    // Using fetch API to send a POST request to the FastAPI endpoint
+    const response = await fetch('http://localhost:8000/retrieve_documents_dense_f', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -51,6 +70,19 @@ async function sendToBackend(message) {
 
     return await response.json();
 }
+
+
+
+/* async function sendToBackend(message) {
+    // Using fetch API to send a GET request to the FastAPI endpoint
+    const response = await fetch(`http://localhost:8000/retrieve_documents_dense?query_str=${encodeURIComponent(message)}`);
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json(); 
+}*/
 
 function appendMessage(sender, message) {
     const chatMessages = document.getElementById('chat-messages');
@@ -84,10 +116,6 @@ function extractReferences(message) {
 }
 
 // main.js
-
-
-
-
   async function sendMessage() {
     if (userInput.trim() !== '') {
       sender = "You"
@@ -95,8 +123,19 @@ function extractReferences(message) {
       
 
       try {
-        // TODO: Add logic to send the message to the backend and get the bot's response
-        const response = await sendToBackend(userInput);
+        
+        let temp_title = "";
+        let temp_yearRange = ""; 
+        let temp_keywords = "";
+
+        // if show filters false, send message to backend without filters
+        if (showFilters) {
+          temp_title = title;
+          temp_yearRange = yearRange;
+          temp_keywords = keywords;
+        }
+
+        const response = await sendToBackend(userInput, temp_title, temp_yearRange, temp_keywords);
         //const botResponse = response.message;
         const responseText = response.message 
         
@@ -150,14 +189,6 @@ function extractReferences(message) {
     color: green;
   }
 
-  #storage-info-container {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-    overflow: hidden;
-    width: 200px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-  }
-
   #chat-container {
     display: flex;
     align-items: center;
@@ -176,6 +207,18 @@ function extractReferences(message) {
 
   #user-input-container {
     display: flex;
+    row-gap: 5px;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 600px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  #filter-controls {
+    flex-direction: column;
     align-items: center;
     padding: 10px;
     background-color: rgba(255, 255, 255, 0.8);
@@ -209,6 +252,7 @@ function extractReferences(message) {
     padding: 8px;
     border: none;
     border-radius: 5px;
+    margin-right: 10px;
     background-color: #4CAF50;
     color: white;
     cursor: pointer;
@@ -241,6 +285,30 @@ function extractReferences(message) {
   #reference-container:hover {
     background-color: blue;
   }
+
+  .hidden {
+    display: none;
+  }
+  
+  .visible {
+    display: block; 
+  }
+  
+  #title-controls, #year-controls, #keywords-controls {
+    flex: 1;
+    padding: 8px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 5px;
+    width: 585px;
+  }
+
+  #filter-switch {
+    cursor: pointer;
+    transform:scale(1.5);
+  }
+
+
 </style>
 
 <body>
@@ -289,9 +357,15 @@ function extractReferences(message) {
     {/if}
     </div>
   </div>
+  <div id="filter-controls" class="{showFilters ? 'visible' : 'hidden'}">
+    <input id="title-controls" type="text" placeholder="Title" bind:value={title} />
+    <input id="year-controls" type="text" placeholder="Years (comma-separated)" bind:value={yearRange} />
+    <input id="keywords-controls" type="text" placeholder="Keywords (comma-separated)" bind:value={keywords} />
+  </div>
   <div id="user-input-container">
-      <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
-      <button id="send-button" on:click={sendMessage}>Send</button>
+    <input type="text" id="user-input" bind:value={userInput} placeholder="Type a message..." on:keydown={(e) => e.key === 'Enter' && sendMessage()} />
+    <button id="send-button" on:click={sendMessage}>Send</button>
+    <input type="checkbox" id="filter-switch" class="filter-switch" bind:checked={showFilters} on:click={() => showFilters = !showFilters}>
   </div>
   
 
