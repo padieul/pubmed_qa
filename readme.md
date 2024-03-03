@@ -83,6 +83,9 @@ vec = angle.encode({'text': 'hello world'}, to_numpy=True)
 
 We created the Python script [`data_embedding_v2.py`](data_preprocessing/data_embedding_v2.py) that takes the CSV file of the chunks we generated in the previous step and generate the embeddings for those chunks and store the output in a new CSV file, we utilized [`Google Colab`](https://colab.google/) for this step as it is requires a GPU to finish in an acceptable time, we repeated this process for the different chunk sizes we experimented with. 
 
+
+> We have created a new embedding class for [`Universal AnglE Embedding`](https://huggingface.co/WhereIsAI/UAE-Large-V1) model as it is natively supported by [`LangChain`](https://www.langchain.com/), we implemented this new functionality in [`models.py`](app/middleware/models.py).
+ 
 ### Data Storage
 
 To store the data with their embeddings in [`OpenSearch`](https://opensearch.org/) we created an index with k-NN enabled and we defined the data types mapping as in the snippet below. 
@@ -169,9 +172,9 @@ We encapsulated the creation of vector store through the helper functions that c
 
 The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
 
-(`App.svelte`): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
+[`App.svelte`](app/frontend/src/App.svelte): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
 
-(`Chatbot.svelte`): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
+[`Chatbot.svelte`](app/frontend/src/Chatbot.svelte): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
 
 ### File Descriptions
 #### App.svelte

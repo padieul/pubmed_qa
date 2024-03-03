@@ -7,7 +7,7 @@ version: '3'
 
 services:
   opensearch:
-    image: opensearchproject/opensearch:${OPENSEARCH_VERSION:-latest}
+    image: opensearchproject/opensearch:2.11.1
     container_name: opensearch
     environment:
       discovery.type: single-node
@@ -22,7 +22,7 @@ services:
       - opensearch-net
 
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:${OPENSEARCH_DASHBOARDS_VERSION:-latest}
+    image: opensearchproject/opensearch-dashboards:2.11.1
     container_name: opensearch-dashboards
     ports:
       - 5601:5601
@@ -37,7 +37,7 @@ services:
 
   middleware:
     build:
-      context: ./middleware  # Path to the middleware directory
+      context: ./app/middleware  # Path to the middleware directory
     container_name: middleware
     ports:
       - 8000:8000  # Map the application's port to host machine
@@ -50,7 +50,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend  # Path to the frontend directory
+      context: ./app/frontend  # Path to the frontend directory
     container_name: frontend
     ports:
       - 3000:3000  # Map the application's port to host machine

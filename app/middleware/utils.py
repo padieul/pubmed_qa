@@ -183,6 +183,6 @@ def processed_output(output: str):
     Returns:
         formatted_answer (str): A properly formatted answer to display in the web front-end
     '''
-    formatted_answer = output[output.find('Answer:') + 9:]
+    formatted_answer = output[output.find('Answer:') + 8:]
 
     return formatted_answer
