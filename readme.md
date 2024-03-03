@@ -2,8 +2,6 @@
 # A RAG-based system for Pubmed
 
 ## Table of Contents
-- [A RAG-based system for Pubmed](#a-rag-based-system-for-pubmed)
-  - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Data Preparation](#data-preparation)
     - [Data Collection](#data-collection)
@@ -12,19 +10,9 @@
     - [Data Storage](#data-storage)
   - [Information Retrieval](#information-retrieval)
   - [User Interface](#user-interface)
-    - [File Descriptions](#file-descriptions)
-      - [App.svelte](#appsvelte)
-        - [Key Features:](#key-features)
-      - [Chatbot.svelte](#chatbotsvelte)
-        - [Key Features:](#key-features-1)
-    - [Requirements](#requirements)
-      - [To run this application:](#to-run-this-application)
-    - [Screenshots](#screenshots)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
-    - [Question Generation Process:](#question-generation-process)
-      - [Complex Question Generation:](#complex-question-generation)
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
