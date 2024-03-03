@@ -1,15 +1,16 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from utils import llm_model, opensearch_vector_store, build_references, processed_output, VariableRetriever
-from config import set_api_keys
 from langchain.chains import RetrievalQA
 from langchain import hub
 
-import asyncio
+from utils import llm_model, opensearch_vector_store, build_references, processed_output
+from config import set_api_keys
+from models import VariableRetriever, RetrievalFilter
 
 rag_pipeline = None
 vectore_store = None
 retriever = None
+prompt = None
 llm = None
 
 
@@ -50,16 +51,17 @@ def server_status(background_tasks: BackgroundTasks):
 
 def initialize_rag_pipeline():
 
-    # Setup all API tokens
+    # Define as global variables so that 
+    # they can be accessed by server_status
     global SERVER_STATUS_MESSAGE
     global SERVER_STATUS
     global rag_pipeline 
     global vectore_store 
     global retriever 
+    global prompt
     global llm
 
-
-
+    # Setup all API tokens
     SERVER_STATUS_MESSAGE = "Setting up API keys..."
     SERVER_STATUS = "NOK"
     set_api_keys()
@@ -69,14 +71,12 @@ def initialize_rag_pipeline():
     SERVER_STATUS = "NOK"
     llm = llm_model()
 
-
     # Initialize OpenSearch vector and store and retriever
     SERVER_STATUS_MESSAGE = "Initializing Opensearch backend..."
     SERVER_STATUS = "NOK"
     vector_store = opensearch_vector_store(index_name="pubmed_500_100")
     retriever = vector_store.as_retriever(search_kwargs={"k": 20, "text_field":"chunk", "vector_field":"embedding"})
-    # v_retriever = VariableRetriever(vectorstore=retriever, filter_year="2018")
-
+    default_retriever = VariableRetriever(vectorstore=retriever, retrieval_filter=RetrievalFilter({"type":"none"}))
 
     # Loads the latest version of RAG prompt
     SERVER_STATUS_MESSAGE = "Setting up RAG pipeline..."
@@ -87,7 +87,7 @@ def initialize_rag_pipeline():
     rag_pipeline = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=retriever,
+        retriever=default_retriever,
         return_source_documents=True,
         chain_type_kwargs={"prompt": prompt, "verbose":"True"},
         verbose=True    
@@ -96,6 +96,30 @@ def initialize_rag_pipeline():
     SERVER_STATUS_MESSAGE = "Setup finished!"
     SERVER_STATUS = "OK"
 
+def reinitialize_rag_pipeline_retriever(filter_dict: dict):
+
+    global SERVER_STATUS_MESSAGE
+    global SERVER_STATUS
+    global rag_pipeline
+    
+    filter_retriever = VariableRetriever(vectorstore=retriever, retrieval_filter=RetrievalFilter(filter_dict))
+
+    # Loads the latest version of RAG prompt
+    SERVER_STATUS_MESSAGE = "Setting up RAG pipeline..."
+    SERVER_STATUS = "NOK"
+
+    # Initialize langChain RAG pipeline
+    rag_pipeline = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=filter_retriever,
+        return_source_documents=True,
+        chain_type_kwargs={"prompt": prompt, "verbose":"True"},
+        verbose=True    
+    )
+
+    SERVER_STATUS_MESSAGE = "Setup finished!"
+    SERVER_STATUS = "OK"
 
 
 @app.get("/read_root")
@@ -109,7 +133,15 @@ async def retrieve_documents(query_str: str):
     """
     A complete end-to-end RAG to answer user questions
     """
-    answer = rag_pipeline.invoke({"query": query_str})    
+    """
+    filter_str = query_str.split("|")[0]
+    query_str = query_str.split("|")[1]
+     
+    if filter_str == "2018-2020":
+        reinitialize_rag_pipeline_retriever({"type":"years", "years":["2018", "2019", "2020"]})
+    """
+
+    answer = rag_pipeline.invoke({"query": query_str})  
 
     output = processed_output(answer["result"])
     
