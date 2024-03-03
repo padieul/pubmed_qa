@@ -58,7 +58,7 @@ def extract_unique_pairs(input_csv_path, output_csv_path):
             
                 if pmids not in seen_pairs:
                     common_keywords = set(df.at[i, 'key_words_list']) & set(df.at[j, 'key_words_list'])
-                    if len(common_keywords) > 10:
+                    if len(common_keywords) > 15:
                         seen_pairs.add(pmids)
                         results.append({
                             'pmid1': pmid1,
