@@ -71,35 +71,53 @@ class RetrievalFilter:
 
     def __init__(self, filter_dict: dict):
 
-        self._target_title = ""
-        self._target_years = []
-        self._target_keywords = []
-        
-        self._filter_type = filter_dict["type"] # title, years, keywords
+        self._target_title = filter_dict["title"]
+        self._target_years = filter_dict["years"]
+        self._target_keywords = filter_dict["keywords"]
 
-        if self._filter_type not in ["title", "years", "keywords"]:
-            self._filter_type = "none"
+        print(f"Title: {self._target_title}")
+        print(f"Years: {self._target_years}")
+        print(f"Keywords: {self._target_keywords}")
 
-        if self._filter_type == "title":
-            self._target_title = filter_dict["title"]
+        if self._target_title == "" and \
+           self._target_years == [] and \
+           self._target_keywords == []:
+            self._filter_type = "no_filter"
+        else:
+            self._filter_type = "filter"
 
-        if self._filter_type == "years":
-            self._target_years = filter_dict["years"]
+    def get_filter_type(self) -> str:
+        return self._filter_type
 
-        if self._filter_type == "keywords":
-            self._target_keywords = filter_dict["keywords"]
-
-
-    def apply(self, doc_list: List[Document]) -> List[Document]:
-        
-        if self._filter_type == "title":
-            return [doc for doc in doc_list if self._target_title.lower() in doc.metadata["title"].lower()]
-        elif self._filter_type == "years":
-            return [doc for doc in doc_list if str(doc.metadata["year"]) in self._target_years]
-        elif self._filter_type == "keywords":
-            return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
-        elif self._filter_type == "none":
+    def _apply_title_filter(self, doc_list: List[Document]) -> List[Document]:
+        if not self._target_title.strip():  # Check if title is empty or whitespace
             return doc_list
+        return [doc for doc in doc_list if self._target_title.lower() in doc.metadata["title"].lower()]
+
+    def _apply_years_filter(self, doc_list: List[Document]) -> List[Document]:
+        if not self._target_years:  # Check if years list is empty
+            return doc_list
+        return [doc for doc in doc_list if str(doc.metadata["year"]) in self._target_years]
+
+    def _apply_keywords_filter(self, doc_list: List[Document]) -> List[Document]:
+        if not self._target_keywords:  # Check if keywords list is empty
+            return doc_list
+        return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
+    
+    def apply(self, doc_list: List[Document]) -> List[Document]:
+
+        if self._filter_type == "no_filter":
+            return doc_list
+        
+        print(f"Applying filter: {self._filter_type}")
+        filters = [self._apply_title_filter, self._apply_years_filter, self._apply_keywords_filter]
+
+        for filter in filters:
+            print(f"Applying filter: {filter.__name__}")
+            print(f"Length of doc_list: {len(doc_list)}")
+            doc_list = filter(doc_list)
+            print(f"Length of doc_list after filtering: {len(doc_list)}")
+        return doc_list
         
 
 class VariableRetriever(VectorStoreRetriever):
@@ -115,9 +133,9 @@ class VariableRetriever(VectorStoreRetriever):
     
     def get_relevant_documents(self, query: str) -> List[Document]:
         results =  self.vectorstore.get_relevant_documents(query=query)
-        print(f"Lenght of results: {len(results)}")
+        print(f"Length of results: {len(results)}")
         filtered_results = self.retrieval_filter.apply(results) 
-        print(f"Lenght of filtered results: {len(filtered_results)}")
+        print(f"Length of filtered results: {len(filtered_results)}")
 
         if len(filtered_results) > 3:
             return filtered_results[:3]
