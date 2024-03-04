@@ -275,7 +275,8 @@ While doing Sparse Search, 40 of 100 Complex Question Generations we use 1 keywo
 In both Dense and Sparse Searches, in the 75% of the searches we look for the most similar chunk, in the 25% of it we look for the two most similar chunks.
 
 In the below diagram, you can see how we generate questions from each of our 100 chunks;
-<div style="text-align:center"><img src="question-generations.png" /></div>
+
+<div style="text-align:center"><img src="images/question-generations.png" /></div>
 
 All these different ways of generating complex questions are for having more diverse set of questions and they are all explained in detail this section of Question Generation Process.
 
