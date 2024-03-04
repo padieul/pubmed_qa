@@ -142,7 +142,7 @@ def get_attributes_for_two_most_similar(similar_chunks_pmids, similar_chunks_chu
 
 def gpt_3_5_turbo(prompt):
     '''
-
+    This function is used to send a prompt to gpt-3-5-turbo model to generate a question and its answer.
     '''
     time.sleep(30) # sleep each time before sending any prompt to gpt
     chat_completion = client_OpenAI.chat.completions.create(
@@ -419,7 +419,7 @@ for i in range(74, num_of_records):
                         "knn": {
                             "embedding": {
                                 "vector": query_embedding_dense[0].tolist(),
-                                "k": size # is this the number of similar chunks that i need to find??
+                                "k": size
                             }
                         }
                     }
