@@ -12,12 +12,11 @@
   - [User Interface](#user-interface)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
-  - [Test Dataset Generation](#test-dataset-generation)
-    - [Test Dataset Generation (Approach 1)](#test-dataset-generation-(approach-1))
-        - [Question Generation Process](#question-generation-process)
-        - [A Record to the Initial Test Set](#a-record-to-the-initial-test-set)
-        - [Generating the Final, Labeled Test-set](#generating-the-final,-labeled-test-set)
-    - [Test Dataset Generation (Approach 2)](#test-dataset-generation-(approach-2))
+  - [Test Dataset Generation (Approach 1)](#test-dataset-generation-(approach-1))
+    - [Question Generation Process](#question-generation-process)
+    - [A Record to the Initial Test Set](#a-record-to-the-initial-test-set)
+    - [Generating the Final, Labeled Test-set](#generating-the-final,-labeled-test-set)
+  - [Test Dataset Generation (Approach 2)](#test-dataset-generation-(approach-2))
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
@@ -252,19 +251,22 @@ As shown above, we used the most up-to-date RAG prompt provided by [`LangChain`]
 
 The difference in the scores between evaluation metrics such as BERTScore, BLEU Score, and ROUGE-L F1 score is expected because each metric evaluates different aspects of the generated text and has different scoring mechanisms. Let's briefly discuss each metric:
 
-1. ### BERTScore:
-    BERTScore is a metric that measures the similarity between two sentences using contextual embeddings from a pre-trained BERT model. It computes the F1 score based on the precision and recall of the overlapping n-grams between the reference and predicted sentences. BERTScore typically produces higher scores when the generated text closely matches the reference text in terms of semantics and fluency.
 
-2. ### BLEU Score: 
+1. ### BLEU Score: 
    BLEU (Bilingual Evaluation Understudy) Score is a metric commonly used for evaluating the quality of machine-translated text. It measures the n-gram overlap between the generated text and the reference text. BLEU Score ranges from 0 to 1, where higher scores indicate higher similarity between the generated and reference text. However, BLEU Score is known to have limitations, such as not considering word order or semantic similarity, which can lead to lower scores compared to other metrics.
 
-3. ### ROUGE-L F1 Score: 
+2. ### ROUGE Score: 
    ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a family of metrics used for evaluating the quality of summarization and machine-generated text. ROUGE-L specifically measures the longest common subsequence (LCS) between the generated text and the reference text, focusing on content overlap. The F1 score is computed based on precision and recall, where higher scores indicate better overlap between the generated and reference text.
+
+3. ### BERTScore:
+    BERTScore is a metric that measures the similarity between two sentences using contextual embeddings from a pre-trained BERT model. It computes the F1 score based on the precision and recall of the overlapping n-grams between the reference and predicted sentences. BERTScore typically produces higher scores when the generated text closely matches the reference text in terms of semantics and fluency.
 
 Each metric has its own strengths, weaknesses, and scoring criteria, which can lead to variations in the scores obtained for the same generated text. Therefore, it's normal to observe differences in the scores between these evaluation metrics. It's important to consider the specific characteristics of each metric and interpret the scores in context to understand the quality of the generated text comprehensively.
 
 ### Evalutaion of the first Dataset
 Here we talk about the evalutation of the main test-set that contains 741 questions total.
+```Python
+'''
 Total Questions: 741;
     Confirmation Questions: 122
     Factoid-type Questions: 114
@@ -276,7 +278,19 @@ Total Questions: 741;
         Generated using Sparse Search for Similariy Search: 92
         Generated using Two Similar Chunks: 138
         Generated using Three Similar Chunks: 44
+'''
+```
 
+We used three metrics that are mentioned above; BLEU Score, ROUGE Score, BERT Score.
+
+#### BLEU Scores 
+In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions. 
+
+<div style="text-align:center"><img src="images/BLUE-Scores.png" /></div>
+
+As we can see from the chart, the BLEU scores are not satisfactory. There is a very good reason for these scores, that is different language models (gpt-3-5-turbo and Falcon-7B-Instruct) have varying vocabularies due to diverse training data, leading to differences in word choices for answers for questions. This discrepancy in vocabulary can result in lower BLEU scores when comparing translations from these models.  BLEU primarily focuses on precision, measuring how many of the generated n-grams match the reference (by gpt-3-5-turbo) n-grams. It doesn't account for differences in recall or consider synonyms effectively. If the models use different words for similar meanings, it can lead to lower BLEU scores despite conveying the intended answer. 
+
+As an example, in Confirmation Questions, [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) mostly generates answers as either 'Yes' or 'No', but our model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) generates additional content. Even though the meaning of the answers are same. We got the lowest BLEU Score for Confirmation Questions as can be seen from the chart above.
 
 #### BLUE Scores
 #### ROUGE Scores
