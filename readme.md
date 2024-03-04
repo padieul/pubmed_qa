@@ -13,6 +13,11 @@
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
+    - [Test Dataset Generation - Approach 1](#)
+        - [Question Generation Process](#)
+        - [A Record to the Initial Test Set](#)
+        - [Generating the Final, Labeled Test-set](#)
+    - [Test Dataset Generation - Approach 1](#)
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
@@ -316,7 +321,7 @@ just give a python list of size 2 with question and its answer for the given chu
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
 ```
 
-#### Complex Questions:
+##### Complex Questions:
 For Complex questions, we have a few variations. First of all, in order to generate a complex question we need to find one or more similar chunks to the chunk that we have. We should do a similarity search and we use Dense or Sparse search to find similar chunks. In our case, we either look for the most similar chunk or the most two similar chunks.
 ###### Dense Search
 We do Dense Search by taking the embedding of our chunk and looking for the chunks that have similar embeddings. In the below code snippet where we do the Dense Search, query_embedding_dense[0].tolist() is the embedding of our chunk and size is the number of similar chunks that we are looking for plus 1 (More on this later). 
@@ -332,7 +337,7 @@ search_query_dense = {
     }
 }
 ```
-##### Sparse Search
+###### Sparse Search
 We do Sparse Search by taking 1 keyword, 2 keywords or 3 keywords as our query and looking for the chunks that has similar content. In the below code snippet that is used for Sparse Search, query_sparse is the query, and the size is again the number of similar chunks that we are looking for plus 1.
 
 ```Python
@@ -398,7 +403,7 @@ just give a python list of size 2 with question and its answer for the given chu
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
 ```
 
-#### A Record to the Initial Test Set
+### A Record to the Initial Test Set
 By now, we have our prompt ready. We can now send it to the gpt-3-5-turbo model and get a question and its answer pair and we do this using the following code snippet;
 
 ```Python
