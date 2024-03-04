@@ -203,9 +203,9 @@ Interact with the Chatbot: Use the web interface to communicate with the chatbot
 
 ### Screenshots
 Here are some screenshots of the frontend interface to give you a glimpse of what to expect:
-<div style="text-align:center"><img src="images/backend_init.png" /></div>
-<div style="text-align:center"><img src="images/server_ready.png" /></div>
-<div style="text-align:center"><img src="images/question.png" /></div>
+<div style="text-align:center"><img src="images/screen1_new.png" /></div>
+<div style="text-align:center"><img src="images/screen2_new.png" /></div>
+<div style="text-align:center"><img src="images/screen4_new.png" /></div>
 
 ## Text Generation
 
@@ -379,3 +379,12 @@ IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!
 7. Creating the RAG pipeline with the most recent RAG prompt from [`LangChain`](https://www.langchain.com/), setting up the retriever with the proper parameters and experimenting with the metadata of the returned source documents.
 8. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to find the model that we can use in our project.
 9. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions in [`installation_instructions.md`](installation_instructions.md), and creating the high-level diagram of the project.
+
+
+### Paul Dietze
+
+1. Setting up the initial architecture configuration with 4 containers for frontend, fastapi-based middleware, Elasticsearch and Kibana. Later changed by Abdulghani to [`OpenSearch`](https://opensearch.org/) resulting in `docker-compose.yml`.
+
+2. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). Also trying to run models locally in a container but then settling for using externally hosted service.
+
+3.
