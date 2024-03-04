@@ -559,26 +559,24 @@ We write these 4 attributes for each question to our final testing test [`refere
 
 
 ## Test Dataset Generation (Approach 2)
-    The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+Key Features:
+Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
+Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
+Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
 
-    Key Features:
-    Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
-    Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
-    Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
+How It Works:
+Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
+Identifying Unique Pairs: It identifies unique pairs of abstracts with more than 15 common keywords, suggesting a meaningful connection between them.
+Generating Questions: For each identified pair, the script generates a complex question by synthesizing the content of both abstracts.
+Output: The generated questions and their corresponding abstract pairs are saved to an output CSV file for further use.
 
-    How It Works:
-    Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
-    Identifying Unique Pairs: It identifies unique pairs of abstracts with more than 15 common keywords, suggesting a meaningful connection between them.
-    Generating Questions: For each identified pair, the script generates a complex question by synthesizing the content of both abstracts.
-    Output: The generated questions and their corresponding abstract pairs are saved to an output CSV file for further use.
-
-    Usage:
-    Set your OpenAI API key in the script.
-    Specify the input CSV file path containing the abstracts and keywords.
-    Define the output CSV file path where the generated questions will be saved.
-    Run the script to produce a dataset of complex questions based on scientific abstracts.
-  
-    The Test data set is then manually checked for any discrepancies using the open-source text annotation tool [`Doccano`](https://github.com/doccano/doccano)
+Usage:
+Set your OpenAI API key in the script.
+Specify the input CSV file path containing the abstracts and keywords.
+Define the output CSV file path where the generated questions will be saved.
+Run the script to produce a dataset of complex questions based on scientific abstracts.
+The Test data set is then manually checked for any discrepancies using the open-source text annotation tool [`Doccano`](https://github.com/doccano/doccano)
 
     [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
 
