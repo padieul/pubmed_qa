@@ -179,35 +179,59 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 3, "text_field":"chunk
 
 We encapsulated the creation of vector store through the helper functions that can be found in the utilities module [`utils.py`](app/middleware/utils.py)
 
+### Metadata filtering after retrieval 
+
+Implementing metadata filtering requires extending the built-in `VectorStoreRetriever` class from [`LangChain`](https://www.langchain.com/), as there's no built-in solution for metadata filtering in [`LangChain`](https://www.langchain.com/). The extension located in [`models.py`](app/middleware/models.py) allows for a custom filtering mechanism based on metadata such as titles, years, and keywords.
+
+``` Python 
+from langchain_core.vectorstores import VectorStoreRetriever
+
+class VariableRetriever(VectorStoreRetriever):
+    def __init__(self, vectorstore, retrieval_filter):
+        self.vectorstore = vectorstore
+        self.retrieval_filter = retrieval_filter
+
+    def get_relevant_documents(self, query: str):
+        # Retrieve documents based on query
+        results = self.vectorstore.get_relevant_documents(query)
+        # Filter documents based on metadata
+        filtered_results = self.retrieval_filter.apply(results)
+        return filtered_results
+
+```
+
+The filtering logic as well as the criteria by which a set of documents should be filtered is encapsulated by the `RetrievalFilter` ([`models.py`](app/middleware/models.py)).
+
 ## User Interface
 
 The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
 
-[`App.svelte`](app/frontend/src/App.svelte): The main component that serves as the entry point for the application, integrating various components, including the chatbot interface.
-
-[`Chatbot.svelte`](app/frontend/src/Chatbot.svelte): Contains the implementation of the chatbot component, managing the user interface and interaction logic.
-
 ### File Descriptions
-#### App.svelte
-The core component of the application, setting up the layout, styles, and integrating the Chatbot.svelte component. It is crucial for initializing the application and providing a container for the chatbot's functionality.
-##### Key Features:
-Application layout initialization.
-Global styles and themes inclusion.
-Integration of the Chatbot.svelte component.
-#### Chatbot.svelte
-Focuses on the chatbot functionality, including the user interface and interaction logic. It allows for user interaction through message input and displays chatbot responses.
-##### Key Features:
-User message input field.
-Display area for user and chatbot messages.
-Logic for processing user input and generating responses.
-Getting Started
-### Requirements
-[`Node.js`](https://nodejs.org/en) (Version 12.x or higher)
-[`npm`](https://docs.npmjs.com/) (Node Package Manager)
-#### To run this application:
-Install Dependencies: In the project root, run npm install to install dependencies.
-Run the Application: Execute npm run dev to start the server. Access the app at http://localhost:5000.
-Interact with the Chatbot: Use the web interface to communicate with the chatbot.
+
+The frontend code consists of 2 files: [`App.svelte`](app/frontend/src/App.svelte) and [`Chatbot.svelte`](app/frontend/src/Chatbot.svelte). The latter contains almost all of the frontend logic, layout and styling.
+
+#### Layout
+
+- The application features a centralized chat interface (`#chat-container`) against a background image (`/images/medicine.jpg`), providing a thematic context.
+- Messages are displayed in a scrollable container (`#chat-messages`), enhancing readability and user engagement.
+- A dedicated input area (`#user-input-container`) allows users to type messages, with a send button (`#send-button`) to submit queries.
+- Filter controls (`#filter-controls`) are optionally displayed, allowing the user to refine searches by title, year range, and keywords. These controls are toggled via a checkbox (`#filter-switch`).
+
+
+#### Endpoints
+
+- **Server Status Check**: Periodically checks the server status at `http://localhost:8000/server_status` and updates the UI based on the server's availability.
+- **Message Sending to Backend**: Sends user messages along with optional filters (title, year range, keywords) to `http://localhost:8000/retrieve_documents_dense_f` for processing and retrieval of relevant documents.
+
+
+#### Features
+
+- **Dynamic Message Handling**: Users can send messages which are then processed by the backend, with the responses including potential references displayed dynamically.
+- **Interactive UI Elements**: The UI provides interactive elements like toggling filter visibility, sending messages, and displaying server status, enhancing user interaction.
+- **Extracting and Displaying References**: Extracts references from the backend's response and displays them as clickable links after the response message, facilitating easy access to source documents.
+- **Real-time Server Status Monitoring**: Continuously monitors the server status, displaying a message about the current status.
+- **Filtering Capability**: Offers users the ability to filter their search queries by title, year range, and keywords, which can be toggled on or off.
+
 
 ### Screenshots
 Here are some screenshots of the frontend interface to give you a glimpse of what to expect:
@@ -626,6 +650,7 @@ The Test data set is then manually checked for any discrepancies using the open-
 
 
 ### Paul Dietze
+0. Initial python script for accessing Pubmed data using different APIs.
 1. Setting up the initial architecture configuration with 4 containers for frontend, FastApi-based middleware, Elasticsearch and Kibana. Later changed by Abdulghani to [`OpenSearch`](https://opensearch.org/) resulting in `docker-compose.yml`.
 2. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). Also trying to run models locally in a container but then settling for using externally hosted service.
 3. Creating initial FastApi endpoints in `app/frontend/middleware/main.py` to communicate with the first iteration of the NodeJS-based frontend implemented by Sushmitha.
@@ -635,6 +660,7 @@ to check the server setup status and display it in the UI.
 a functionality that is not explicitly provided by the [`LangChain`](https://www.langchain.com/) library.
 6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters.
 7. Actively particapting in group debugging sessions. Assisting group members in configuring local projects for development.
+8. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions UI screenshots in [`installation_instructions.md`](installation_instructions.md)
 
 
 ### Mahammad Nahmadov
