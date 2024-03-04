@@ -12,11 +12,12 @@
   - [User Interface](#user-interface)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
-  - [Test Dataset Generation (Approach 1)](#test-dataset-generation-(approach-1))
+    - [Evalutaion of the first Data Set](#evalutaion-of-the-first-data-set)
+  - [Test Dataset Generation Approach 1](#test-dataset-generation-approach-1)
     - [Question Generation Process](#question-generation-process)
-    - [A Record to the Initial Test Set](#a-record-to-the-initial-test-set)
-    - [Generating the Final, Labeled Test-set](#generating-the-final,-labeled-test-set)
-  - [Test Dataset Generation (Approach 2)](#test-dataset-generation-(approach-2))
+    - [Records to the Initial Test Set](#records-to-the-initial-test-set)
+    - [Generating the Labeled Test Set](#generating-the-labeled-test-set)
+  - [Test Dataset Generation Approach 2](#test-dataset-generation-approach-2)
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
@@ -263,7 +264,7 @@ The difference in the scores between evaluation metrics such as BERTScore, BLEU 
 
 Each metric has its own strengths, weaknesses, and scoring criteria, which can lead to variations in the scores obtained for the same generated text. Therefore, it's normal to observe differences in the scores between these evaluation metrics. It's important to consider the specific characteristics of each metric and interpret the scores in context to understand the quality of the generated text comprehensively.
 
-### Evalutaion of the first Dataset
+### Evalutaion of the first Data Set
 Here we talk about the evalutation of the main test-set that contains 741 questions total.
 ```Python
 '''
@@ -284,19 +285,28 @@ Total Questions: 741;
 We used three metrics that are mentioned above; BLEU Score, ROUGE Score, BERT Score.
 
 #### BLEU Scores 
-In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions. 
+In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions.
 
 <div style="text-align:center"><img src="images/BLUE-Scores.png" /></div>
 
-As we can see from the chart, the BLEU scores are not satisfactory. There is a very good reason for these scores, that is different language models (gpt-3-5-turbo and Falcon-7B-Instruct) have varying vocabularies due to diverse training data, leading to differences in word choices for answers for questions. This discrepancy in vocabulary can result in lower BLEU scores when comparing translations from these models.  BLEU primarily focuses on precision, measuring how many of the generated n-grams match the reference (by gpt-3-5-turbo) n-grams. It doesn't account for differences in recall or consider synonyms effectively. If the models use different words for similar meanings, it can lead to lower BLEU scores despite conveying the intended answer. 
+As we can see from the chart, the BLEU scores are not satisfactory. There is a very good reason for these scores, that is different language models (gpt-3-5-turbo and Falcon-7B-Instruct) have varying vocabularies due to diverse training data, leading to differences in word choices for answers for questions. This discrepancy in vocabulary can result in lower BLEU scores when comparing translations from these models.  BLEU primarily focuses on precision, measuring how many of the generated n-grams appear in the reference (by gpt-3-5-turbo).
+
+It doesn't account for differences in recall or consider synonyms effectively. If the models use different words for similar meanings, it can lead to lower BLEU scores despite conveying the intended answer. 
 
 As an example, in Confirmation Questions, [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) mostly generates answers as either 'Yes' or 'No', but our model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) generates additional content. Even though the meaning of the answers are same. We got the lowest BLEU Score for Confirmation Questions as can be seen from the chart above.
 
-#### BLUE Scores
 #### ROUGE Scores
+In the chart given below, we have 4 ROUGE Scores.
+
+<div style="text-align:center"><img src="images/ROUGE-Scores.png" /></div>
+
+As we can see ROUGE Scores are better than the BLEU Scores. This is because ROUGE prioritizes recall over precision, measuring what percent of n-grams in the reference occur in the generated output. As we mentioned previously, references usually contain less words, and since ROUGE is looking for reference words in the generated output, its scores are better than the BLEU scores.
+
+It is important to mention that, the ROUGE Scores are still not good enough. This is again because of the vocabulary differences, the references and generated predictions may mean the same thing but have different word choices. As like BLEU, ROUGE does not campture the meaning of word and sentence semantics.
+
 #### BERT Scores
 
-## Test Dataset Generation (Approach 1)
+## Test Dataset Generation Approach 1
 Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts; 1) Yes/No Questions, 2) Factoid-type Questions [what, which, when, who, how], 3) List-type Questions, 4) Causal Questions [why or how], 5) Hypothetical Questions, 6) Complex Questions
 
 ### Question Generation Process:
@@ -428,7 +438,7 @@ just give a python list of size 2 with question and its answer for the given chu
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
 ```
 
-### A Record to the Initial Test Set
+### Records to the Initial Test Set
 By now, we have our prompt ready. We can now send it to the gpt-3-5-turbo model and get a question and its answer pair and we do this using the following code snippet;
 
 ```Python
@@ -530,7 +540,7 @@ THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID: '{pmid}', CHUNK ID: 
 As explained in the above code snippet, we also keep track of the warnings in the cases of different invalid responses from the model. 
 
 
-#### Generating the Final, Labeled Test-set
+#### Generating the Labeled Test Set
 Now we have created an initial test predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv) that has questions, their answer, types and other attributes of the chunks used. However, it does not have predictions/answers by the model that our system is built on. 
 
 So, we create a labeled test-set [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) from our initially generated test-set. We used our llm model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate the predictions/labels for our questions in the original test-set. 
@@ -558,7 +568,7 @@ We write these 4 attributes for each question to our final testing test [`refere
 
 
 
-## Test Dataset Generation (Approach 2)
+## Test Dataset Generation Approach 2
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
     Key Features:
