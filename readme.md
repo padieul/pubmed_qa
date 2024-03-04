@@ -13,11 +13,11 @@
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
   - [Test Dataset Generation](#test-dataset-generation)
-    - [Test Dataset Generation - Approach 1](#)
-        - [Question Generation Process](#)
-        - [A Record to the Initial Test Set](#)
-        - [Generating the Final, Labeled Test-set](#)
-    - [Test Dataset Generation - Approach 1](#)
+    - [Test Dataset Generation (Approach 1)](#Test-Dataset-Generation-(Approach-1))
+        - [Question Generation Process](#Question-Generation-Process)
+        - [A Record to the Initial Test Set](#A-Record-to-the-Initial-Test-Set)
+        - [Generating the Final, Labeled Test-set](#Generating-the-Final,-Labeled-Test-set)
+    - [Test Dataset Generation - (Approach 2)](#Test-Dataset-Generation-(Approach-2))
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
@@ -264,14 +264,25 @@ The difference in the scores between evaluation metrics such as BERTScore, BLEU 
 Each metric has its own strengths, weaknesses, and scoring criteria, which can lead to variations in the scores obtained for the same generated text. Therefore, it's normal to observe differences in the scores between these evaluation metrics. It's important to consider the specific characteristics of each metric and interpret the scores in context to understand the quality of the generated text comprehensively.
 
 ### Evalutaion of the first Dataset
-Evalutation of the main test-set that contains 741 questions total;
+Here we talk about the evalutation of the main test-set that contains 741 questions total.
+Total Questions: 741;
+    Confirmation Questions: 122
+    Factoid-type Questions: 114
+    List-type Questions: 103
+    Causal Questions: 105
+    Hypothetical Questions: 111
+    Complex Questions: 186;
+        Generated using Dense Search for Similariy Search: 94
+        Generated using Sparse Search for Similariy Search: 92
+        Generated using Two Similar Chunks: 138
+        Generated using Three Similar Chunks: 44
 
 
 #### BLUE Scores
 #### ROUGE Scores
 #### BERT Scores
 
-## Test Dataset Generation - Approach 1
+## Test Dataset Generation (Approach 1)
 Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts; 1) Yes/No Questions, 2) Factoid-type Questions [what, which, when, who, how], 3) List-type Questions, 4) Causal Questions [why or how], 5) Hypothetical Questions, 6) Complex Questions
 
 ### Question Generation Process:
@@ -533,7 +544,7 @@ We write these 4 attributes for each question to our final testing test [`refere
 
 
 
-## Test Dataset Generation - Approach 2
+## Test Dataset Generation (Approach 2)
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
     Key Features:
