@@ -1,3 +1,17 @@
+Sizes:
+Number of All Questions: 741
+Number of Confirmation Questions: 122
+Number of Factoid-type Questions: 114
+Number of List-type Questions: 103
+Number of Causal Questions: 105
+Number of Hypothetical Questions: 111
+Number of Complex Questions: 186
+Number of Complex Questons (Generated using Dense Search for Similariy Search): 94
+Number of Complex Questons (Generated using Sparse Search for Similariy Search): 92
+Number of Complex Questons (Generated using Two Similar Chunks): 138
+Number of Complex Questons (Generated using Three Similar Chunks): 44
+
+
 BLEU Scores:
 
 BLEU Score for All Questions: 0.08670415979863454, Precision-1: 0.17848151062155782, Precision-2: 0.09179823948581808, Precision-3: 0.06657482069775923, Precision-4: 0.05181102038297785

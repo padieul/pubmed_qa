@@ -63,7 +63,7 @@ print(f"Number of Hypothetical Questions: {len(df_hypothetical)}\nNumber of Comp
 print(f"Number of Complex Questons (Generated using Dense Search for Similariy Search): {len(df_complex_dense)}")
 print(f"Number of Complex Questons (Generated using Sparse Search for Similariy Search): {len(df_complex_sparse)}")
 print(f"Number of Complex Questons (Generated using Two Similar Chunks): {len(df_complex_2chunks)}")
-print(f"Number of Complex Questons (Generated using Three Similar Chunks): {len(df_complex_3chunks)}\n")
+print(f"Number of Complex Questons (Generated using Three Similar Chunks): {len(df_complex_3chunks)}\n\n\n")
 
 
 # Here we get the references and prediction for all questions for overall evaluation
