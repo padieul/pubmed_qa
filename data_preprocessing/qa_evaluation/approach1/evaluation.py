@@ -179,7 +179,7 @@ Precision-3: {bleu_results_complex_2chunks['precisions'][2]}, Precision-4: {bleu
 
 print(f"BLEU Score for Complex Questions Generated using Three Chunks: {bleu_results_complex_3chunks['bleu']}, \
 Precision-1: {bleu_results_complex_3chunks['precisions'][0]}, Precision-2: {bleu_results_complex_3chunks['precisions'][1]}, \
-Precision-3: {bleu_results_complex_3chunks['precisions'][2]}, Precision-4: {bleu_results_complex_3chunks['precisions'][3]}\n")
+Precision-3: {bleu_results_complex_3chunks['precisions'][2]}, Precision-4: {bleu_results_complex_3chunks['precisions'][3]}\n\n\n")
 
 
 # HERE WE ARE COMPUTING ROUGE RESULTS 
@@ -208,35 +208,133 @@ rouge_results_complex_2chunks = rouge.compute(predictions=predictions_complex_2c
 rouge_results_complex_3chunks = rouge.compute(predictions=predictions_complex_3chunks, 
                                            references=references_complex_3chunks)
 
-# print(rouge_results_complex_3chunks)
 # PRINTING THE ROUGE SCORES
+print("ROUGE Scores:\n")
 print(f"ROUGE Scores for All Questions - ROUGE-1: {rouge_results_all['rouge1']}, \
 ROUGE-2: {rouge_results_all['rouge2']}, ROUGE-L: {rouge_results_all['rougeL']}, \
-ROUGE-Lsum: {rouge_results_all['rougeLsum']}")
+ROUGE-Lsum: {rouge_results_all['rougeLsum']}\n")
 
 print(f"ROUGE Scores for Confirmation Questions - ROUGE-1: {rouge_results_confirmation['rouge1']}, \
 ROUGE-2: {rouge_results_confirmation['rouge2']}, ROUGE-L: {rouge_results_confirmation['rougeL']}, \
-ROUGE-Lsum: {rouge_results_confirmation['rougeLsum']}")
+ROUGE-Lsum: {rouge_results_confirmation['rougeLsum']}\n")
 
-print(f"ROUGE Scores Factoid Type Questions - ROUGE-1: {rouge_results_factoid_type['rouge1']}, \
+print(f"ROUGE Scores for Factoid Type Questions - ROUGE-1: {rouge_results_factoid_type['rouge1']}, \
 ROUGE-2: {rouge_results_factoid_type['rouge2']}, ROUGE-L: {rouge_results_factoid_type['rougeL']}, \
-ROUGE-Lsum: {rouge_results_factoid_type['rougeLsum']}")
-# print("BLEU Score for Factoid Type Questions:", bleu_results_factoid_type['bleu'])
-# print("BLEU Score for List Type Questions:", bleu_results_list_type['bleu'])
-# print("BLEU Score for Causal Questions:", bleu_results_causal['bleu'])
-# print("BLEU Score for Hypothetical Questions:", bleu_results_hypothetical['bleu'])
-# print("BLEU Score for All Complex Questions:", bleu_results_complex['bleu'])
-# print("BLEU Score for Complex Questions Generated using Dense Seach:", bleu_results_complex_dense['bleu'])
-# print("BLEU Score for Complex Questions Generated using Sparse Search:", bleu_results_complex_sparse['bleu'])
-# print("BLEU Score for Complex Questions Generated using Two Chunks:", bleu_results_complex_2chunks['bleu'])
-# print("BLEU Score for Complex Questions Generated using Three Chunks:", bleu_results_complex_3chunks['bleu'])
+ROUGE-Lsum: {rouge_results_factoid_type['rougeLsum']}\n")
+
+print(f"ROUGE Score for List Type Questions - ROUGE-1: {rouge_results_list_type['rouge1']}, \
+ROUGE-2: {rouge_results_list_type['rouge2']}, ROUGE-L: {rouge_results_list_type['rougeL']}, \
+ROUGE-Lsum: {rouge_results_list_type['rougeLsum']}\n")
+
+print(f"ROUGE Score for Causal Questions - ROUGE-1: {rouge_results_causal['rouge1']}, \
+ROUGE-2: {rouge_results_causal['rouge2']}, ROUGE-L: {rouge_results_causal['rougeL']}, \
+ROUGE-Lsum: {rouge_results_causal['rougeLsum']}\n")
+
+print(f"ROUGE Score for Hypothetical Questions - ROUGE-1: {rouge_results_hypothetical['rouge1']}, \
+ROUGE-2: {rouge_results_hypothetical['rouge2']}, ROUGE-L: {rouge_results_hypothetical['rougeL']}, \
+ROUGE-Lsum: {rouge_results_hypothetical['rougeLsum']}\n")
+
+print(f"ROUGE Score for All Complex Questions - ROUGE-1: {rouge_results_complex['rouge1']}, \
+ROUGE-2: {rouge_results_complex['rouge2']}, ROUGE-L: {rouge_results_complex['rougeL']}, \
+ROUGE-Lsum: {rouge_results_complex['rougeLsum']}\n")
+
+print(f"ROUGE Score for Complex Questions Generated using Dense Search - ROUGE-1: \
+{rouge_results_complex_dense['rouge1']}, ROUGE-2: {rouge_results_complex_dense['rouge2']}, \
+ROUGE-L: {rouge_results_complex_dense['rougeL']}, ROUGE-Lsum: {rouge_results_complex_dense['rougeLsum']}\n")
+
+print(f"ROUGE Score for Complex Questions Generated using Sparse Search - ROUGE-1: \
+{rouge_results_complex_sparse['rouge1']}, ROUGE-2: {rouge_results_complex_sparse['rouge2']}, \
+ROUGE-L: {rouge_results_complex_sparse['rougeL']}, ROUGE-Lsum: {rouge_results_complex_sparse['rougeLsum']}\n")
+
+print(f"ROUGE Score for Complex Questions Generated using Two Chunks - ROUGE-1: \
+{rouge_results_complex_2chunks['rouge1']}, ROUGE-2: {rouge_results_complex_2chunks['rouge2']}, \
+ROUGE-L: {rouge_results_complex_2chunks['rougeL']}, ROUGE-Lsum: {rouge_results_complex_2chunks['rougeLsum']}\n")
+
+print(f"ROUGE Score for Complex Questions Generated using Three Chunks - ROUGE-1: \
+{rouge_results_complex_3chunks['rouge1']}, ROUGE-2: {rouge_results_complex_3chunks['rouge2']}, \
+ROUGE-L: {rouge_results_complex_3chunks['rougeL']}, ROUGE-Lsum: {rouge_results_complex_3chunks['rougeLsum']}\n\n\n")
 
 
+# HERE WE ARE COMPUTING BERTScore RESULTS 
+bertscore_results_all = bertscore.compute(predictions=predictions_all, 
+                                          references=references_all, lang="en")
 
-# bertscore_results_all = bertscore.compute(predictions=predictions_all, 
-#                                           references=references_all, lang="en")
+bertscore_results_confirmation = bertscore.compute(predictions=predictions_confirmation, 
+                                           references=references_confirmation, lang="en")
+
+bertscore_results_factoid_type = bertscore.compute(predictions=predictions_factoid_type, 
+                                           references=references_factoid_type, lang="en")
+bertscore_results_list_type = bertscore.compute(predictions=predictions_list_type, 
+                                           references=references_list_type, lang="en")
+bertscore_results_causal = bertscore.compute(predictions=predictions_causal, 
+                                           references=references_causal, lang="en")
+bertscore_results_hypothetical = bertscore.compute(predictions=predictions_hypothetical, 
+                                           references=references_hypothetical, lang="en")
+
+bertscore_results_complex = bertscore.compute(predictions=predictions_complex, 
+                                           references=references_complex, lang="en")
+bertscore_results_complex_dense = bertscore.compute(predictions=predictions_complex_dense, 
+                                           references=references_complex_dense, lang="en")
+bertscore_results_complex_sparse = bertscore.compute(predictions=predictions_complex_sparse, 
+                                           references=references_complex_sparse, lang="en")
+bertscore_results_complex_2chunks = bertscore.compute(predictions=predictions_complex_2chunks, 
+                                           references=references_complex_2chunks, lang="en")
+bertscore_results_complex_3chunks = bertscore.compute(predictions=predictions_complex_3chunks, 
+                                           references=references_complex_3chunks, lang="en")
+
 # precision_scores = bertscore_results_all['precision']
 # recall_scores = bertscore_results_all['recall']
 # f1_scores = bertscore_results_all['f1']
 
 # print(np.mean(f1_scores))
+
+# PRINTING THE BERTScores
+print("BERTScores:\n")
+
+print(f"BERTScore for All Questions - F1: {np.mean(bertscore_results_all['f1'])}, \
+Precision: {np.mean(bertscore_results_all['precision'])}, Recall: {np.mean(bertscore_results_all['recall'])}\n")
+
+print(f"BERTScore for Confirmation Questions - F1: {np.mean(bertscore_results_confirmation['f1'])}, \
+Precision: {np.mean(bertscore_results_confirmation['precision'])}, \
+Recall: {np.mean(bertscore_results_confirmation['recall'])}\n")
+
+print(f"BERTScore for Factoid Type Questions - F1: {np.mean(bertscore_results_factoid_type['f1'])}, \
+Precision: {np.mean(bertscore_results_factoid_type['precision'])}, \
+Recall: {np.mean(bertscore_results_factoid_type['recall'])}\n")
+
+print(f"BERTScore for List Type Questions - F1: {np.mean(bertscore_results_list_type['f1'])}, \
+Precision: {np.mean(bertscore_results_list_type['precision'])}, \
+Recall: {np.mean(bertscore_results_list_type['recall'])}\n")
+
+print(f"BERTScore for Causal Questions - F1: {np.mean(bertscore_results_causal['f1'])}, \
+Precision: {np.mean(bertscore_results_causal['precision'])}, \
+Recall: {np.mean(bertscore_results_causal['recall'])}\n")
+
+print(f"BERTScore for Hypothetical Questions - F1: {np.mean(bertscore_results_hypothetical['f1'])}, \
+Precision: {np.mean(bertscore_results_hypothetical['precision'])}, \
+Recall: {np.mean(bertscore_results_hypothetical['recall'])}\n")
+
+print(f"BERTScore for All Complex Questions - F1: {np.mean(bertscore_results_complex['f1'])}, \
+Precision: {np.mean(bertscore_results_complex['precision'])}, \
+Recall: {np.mean(bertscore_results_complex['recall'])}\n")
+
+print(f"BERTScore for Complex Questions Generated using Dense Search - \
+F1:{np.mean(bertscore_results_complex_dense['f1'])}, \
+Precision: {np.mean(bertscore_results_complex_dense['precision'])}, \
+Recall: {np.mean(bertscore_results_complex_dense['recall'])}\n")
+
+print(f"BERTScore for Complex Questions Generated using Sparse Search - \
+F1:{np.mean(bertscore_results_complex_sparse['f1'])}, \
+Precision: {np.mean(bertscore_results_complex_sparse['precision'])}, \
+Recall: {np.mean(bertscore_results_complex_sparse['recall'])}\n")
+
+print(f"BERTScore for Complex Questions Generated using Two Chunks - \
+F1:{np.mean(bertscore_results_complex_2chunks['f1'])}, \
+Precision: {np.mean(bertscore_results_complex_2chunks['precision'])}, \
+Recall: {np.mean(bertscore_results_complex_2chunks['recall'])}\n")
+
+print(f"BERTScore for Complex Questions Generated using Three Chunks - \
+F1:{np.mean(bertscore_results_complex_3chunks['f1'])}, \
+Precision: {np.mean(bertscore_results_complex_3chunks['precision'])}, \
+Recall: {np.mean(bertscore_results_complex_3chunks['recall'])}\n")
+
