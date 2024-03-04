@@ -638,6 +638,11 @@ a functionality that is not explicitly provided by the [`LangChain`](https://www
 
 
 ### Mahammad Nahmadov
+1. Generated the testing set with 741 total question and answer pairs, including 4 types of Simple Questions: Confirmation, Factoid-type, List-type, Causal, Hypothetical and 4 types of Complex Questions: Complex Questions Generated using Sparse Search, Complex Questions Generated using Dense Search. Complex Questions Generated using 2 chunks, Complex Questions Generated using 3 chunks.
+2. Experimented with different models including [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo), [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate questions and answers as references for testing set.
+3. Performed Prompt Engineering, Data Engineering and Analtics to generate more diverse set of questions, by engineering different parameters for generation of questions, including use of different search methods to find similar chunks (Sparse, Dense), use of different number of keywords as query for Sparse Search (1 keyword, 2 keywords, 3 keywords), use of different nuber of chunks (two chunks, three chunks) for generation of Complex Questions.
+4. Evaluated the created testing with 741 records using BLEU, ROUGE, BERTScore metrics, and performed investigation on achieved results.
+5. Added documentations for testing set generation and evaluations.
 
 ### Sushmitha Chandrakumar
 1. Spearheaded the creation of an interactive graphical user interface for the chatbot, leveraging the Svelte frontend framework to ensure a user-friendly and responsive design.[`App.svelte`](app/frontend/src/App.svelte) [`Chatbot.svelte`](app/frontend/src/Chatbot.svelte)
