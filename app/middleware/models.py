@@ -72,8 +72,8 @@ class RetrievalFilter:
     def __init__(self, filter_dict: dict):
 
         self._target_title = filter_dict["title"]
-        self._target_years = filter_dict["years"]
-        self._target_keywords = filter_dict["keywords"]
+        self._target_years = [year.strip() for year in filter_dict["years"]]
+        self._target_keywords = [keyword.strip() for keyword in filter_dict["keywords"]]
 
         print(f"Title: {self._target_title}")
         print(f"Years: {self._target_years}")
@@ -111,6 +111,10 @@ class RetrievalFilter:
         # if self._target_years is a list of empty strings, return doc_list
         if all(not keyword for keyword in self._target_keywords):
             return doc_list
+        
+        print("target_keywords: ", self._target_keywords)
+        print("page_content0: ", doc_list[0].page_content.lower())
+        
 
         return [doc for doc in doc_list if all(keyword.lower() in doc.page_content.lower() for keyword in self._target_keywords)]
     

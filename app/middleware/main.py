@@ -137,7 +137,7 @@ def read_root(message: str):
 
 class Filter(BaseModel):
     title: Optional[str] = Field(None, description="The title to filter by")
-    year_range: Optional[List[str]] = Field(None, description="The range of years to filter by")
+    years: Optional[List[str]] = Field(None, description="The range of years to filter by")
     keywords: Optional[List[str]] = Field(None, description="The keywords to filter by")
 
 class RequestBody(BaseModel):
@@ -155,9 +155,13 @@ async def retrieve_documents(body: RequestBody):
     query_str = body.query_str
     filter_data = {
         "title": str(filter.title) if filter.title else "",
-        "years": [str(year) for year in filter.year_range] if filter.year_range else [],
+        "years": [str(year) for year in filter.years] if filter.years else [],
         "keywords": [str(keyword) for keyword in filter.keywords] if filter.keywords else []
         }
+    
+    print("title: ", filter.title)
+    print("years: ", filter.years)
+    print("keywords: ", filter.keywords)
    
     # all values are empty -> no filtering
     if all(not value for value in filter_data.values()):

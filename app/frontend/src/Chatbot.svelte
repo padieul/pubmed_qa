@@ -46,6 +46,12 @@
   
 async function sendToBackend(message, _title, _yearRange, _keywords) {
     // Prepare the request body
+
+    // print _title, _yearRange, _keywords and their types
+    console.log("Title: ", _title, typeof _title)
+    console.log("Year Range: ", _yearRange, typeof _yearRange)
+    console.log("Keywords: ", _keywords, typeof _keywords)
+
     const body = {
       filter: {
         title: _title,

@@ -2,8 +2,6 @@
 # A RAG-based system for Pubmed
 
 ## Table of Contents
-- [A RAG-based system for Pubmed](#a-rag-based-system-for-pubmed)
-  - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Data Preparation](#data-preparation)
     - [Data Collection](#data-collection)
@@ -12,19 +10,13 @@
     - [Data Storage](#data-storage)
   - [Information Retrieval](#information-retrieval)
   - [User Interface](#user-interface)
-    - [File Descriptions](#file-descriptions)
-      - [App.svelte](#appsvelte)
-        - [Key Features:](#key-features)
-      - [Chatbot.svelte](#chatbotsvelte)
-        - [Key Features:](#key-features-1)
-    - [Requirements](#requirements)
-      - [To run this application:](#to-run-this-application)
-    - [Screenshots](#screenshots)
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
-  - [Test Dataset Generation](#test-dataset-generation)
-    - [Question Generation Process:](#question-generation-process)
-      - [Complex Question Generation:](#complex-question-generation)
+  - [Test Dataset Generation (Approach 1)](#test-dataset-generation-(approach-1))
+    - [Question Generation Process](#question-generation-process)
+    - [A Record to the Initial Test Set](#a-record-to-the-initial-test-set)
+    - [Generating the Final, Labeled Test-set](#generating-the-final,-labeled-test-set)
+  - [Test Dataset Generation (Approach 2)](#test-dataset-generation-(approach-2))
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
 
@@ -33,9 +25,9 @@
 
 The architecture of the project consists of four components that are containerized in [`Docker`](https://www.docker.com/) containers and interconnected using [`Docker`](https://www.docker.com/) internal network that is also accessible using the local host computer. The four components are as follows:
 
-- Front-end web interface to receive user queries
-- Middleware powered by FastAPI to retrieve the documents from OpenSearch, filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
-- OpenSearch for document and vector storage, indexing and retrieval
+- Front-end web interface to receive user queries, powered by [`Svelte`](https://svelte.dev/) framework
+- Middleware powered by [`FastAPI`](https://fastapi.tiangolo.com/) to retrieve the documents from [`OpenSearch`](https://opensearch.org/), filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
+- [`OpenSearch`](https://opensearch.org/) for document and vector storage, indexing and retrieval
 
 To the run the project for testing, please follow the steps in the [`installation_instructions.md`](installation_instructions.md)
 
@@ -215,9 +207,9 @@ Interact with the Chatbot: Use the web interface to communicate with the chatbot
 
 ### Screenshots
 Here are some screenshots of the frontend interface to give you a glimpse of what to expect:
-<div style="text-align:center"><img src="images/backend_init.png" /></div>
-<div style="text-align:center"><img src="images/server_ready.png" /></div>
-<div style="text-align:center"><img src="images/question.png" /></div>
+<div style="text-align:center"><img src="images/screen1_new.png" /></div>
+<div style="text-align:center"><img src="images/screen2_new.png" /></div>
+<div style="text-align:center"><img src="images/screen4_new.png" /></div>
 
 ## Text Generation
 
@@ -259,102 +251,314 @@ As shown above, we used the most up-to-date RAG prompt provided by [`LangChain`]
 
 The difference in the scores between evaluation metrics such as BERTScore, BLEU Score, and ROUGE-L F1 score is expected because each metric evaluates different aspects of the generated text and has different scoring mechanisms. Let's briefly discuss each metric:
 
-1. ### BERTScore:
-    BERTScore is a metric that measures the similarity between two sentences using contextual embeddings from a pre-trained BERT model. It computes the F1 score based on the precision and recall of the overlapping n-grams between the reference and predicted sentences. BERTScore typically produces higher scores when the generated text closely matches the reference text in terms of semantics and fluency.
 
-2. ### BLEU Score: 
+1. ### BLEU Score: 
    BLEU (Bilingual Evaluation Understudy) Score is a metric commonly used for evaluating the quality of machine-translated text. It measures the n-gram overlap between the generated text and the reference text. BLEU Score ranges from 0 to 1, where higher scores indicate higher similarity between the generated and reference text. However, BLEU Score is known to have limitations, such as not considering word order or semantic similarity, which can lead to lower scores compared to other metrics.
 
-3. ### ROUGE-L F1 Score: 
+2. ### ROUGE Score: 
    ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a family of metrics used for evaluating the quality of summarization and machine-generated text. ROUGE-L specifically measures the longest common subsequence (LCS) between the generated text and the reference text, focusing on content overlap. The F1 score is computed based on precision and recall, where higher scores indicate better overlap between the generated and reference text.
+
+3. ### BERTScore:
+    BERTScore is a metric that measures the similarity between two sentences using contextual embeddings from a pre-trained BERT model. It computes the F1 score based on the precision and recall of the overlapping n-grams between the reference and predicted sentences. BERTScore typically produces higher scores when the generated text closely matches the reference text in terms of semantics and fluency.
 
 Each metric has its own strengths, weaknesses, and scoring criteria, which can lead to variations in the scores obtained for the same generated text. Therefore, it's normal to observe differences in the scores between these evaluation metrics. It's important to consider the specific characteristics of each metric and interpret the scores in context to understand the quality of the generated text comprehensively.
 
-## Test Dataset Generation
-    Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts.
-    1) Yes/No Questions: these are the questions that essentially require a yes or no answer e.g., “Is Paris the capital of France?”.
-    2) Factoid-type Questions [what, which, when, who, how]: These questions usually begin with a “wh”-word. An answer to these questions is commonly short and formulated as a single sentence. In some cases, contents of documents already answers the question, e.g., “What is the capital of France?”, where a sentence from Wikipedia answers the question.
-    3) List-type Questions: The answer to this type of questions is a list of items, e.g.,“Which cities have served as the capital of France throughout its history?”. If the exact list of items are already found in documents, answer generation is not necessary. 
-    4) Causal Questions [why or how]: Causal questions usually require reasons, explanations, and elaborations on particular objects or events in the answers, e.g., “Why did Paris become the capital of France?”
-    5) Hypothetical Questions: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., “What would happen if Paris airport closes for a day?”. It is usually hard to get a good accuracy on answering to these questions. In our setting, the answer is usually expected not to be reliable as it is a medical domain.
-    6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
+### Evalutaion of the first Dataset
+Here we talk about the evalutation of the main test-set that contains 741 questions total.
+```Python
+'''
+Total Questions: 741;
+    Confirmation Questions: 122
+    Factoid-type Questions: 114
+    List-type Questions: 103
+    Causal Questions: 105
+    Hypothetical Questions: 111
+    Complex Questions: 186;
+        Generated using Dense Search for Similariy Search: 94
+        Generated using Sparse Search for Similariy Search: 92
+        Generated using Two Similar Chunks: 138
+        Generated using Three Similar Chunks: 44
+'''
+```
+
+We used three metrics that are mentioned above; BLEU Score, ROUGE Score, BERT Score.
+
+#### BLEU Scores 
+In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions. 
+
+<div style="text-align:center"><img src="images/BLUE-Scores.png" /></div>
+
+As we can see from the chart, the BLEU scores are not satisfactory. There is a very good reason for these scores, that is different language models (gpt-3-5-turbo and Falcon-7B-Instruct) have varying vocabularies due to diverse training data, leading to differences in word choices for answers for questions. This discrepancy in vocabulary can result in lower BLEU scores when comparing translations from these models.  BLEU primarily focuses on precision, measuring how many of the generated n-grams match the reference (by gpt-3-5-turbo) n-grams. It doesn't account for differences in recall or consider synonyms effectively. If the models use different words for similar meanings, it can lead to lower BLEU scores despite conveying the intended answer. 
+
+As an example, in Confirmation Questions, [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) mostly generates answers as either 'Yes' or 'No', but our model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) generates additional content. Even though the meaning of the answers are same. We got the lowest BLEU Score for Confirmation Questions as can be seen from the chart above.
+
+#### BLUE Scores
+#### ROUGE Scores
+#### BERT Scores
+
+## Test Dataset Generation (Approach 1)
+Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts; 1) Yes/No Questions, 2) Factoid-type Questions [what, which, when, who, how], 3) List-type Questions, 4) Causal Questions [why or how], 5) Hypothetical Questions, 6) Complex Questions
 
 ### Question Generation Process:
-    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.
-    We have also tried other freely available models but they do not offer enough rate for our case. So, we had to continue with gpt-3.5-turbo model.
-    One of 6 prompts for each question type is used along with a given chunks (chunks in the case of complex questions) to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
+We generate 100 for each Simple Question type: Confirmation, Factoid-type, List-type, Causal, Hypothetical and 100 for each Complex Question type: Complex Questions Generated by similar chunks found by Dense Search and Complex Questions Generated by similar chunks found by Sparse Search. 
+While doing Sparse Search, 40 of 100 Complex Question Generations we use 1 keyword of the original chunk as the query to find similar chunks, another 40 of 100 we use 2 keywords as query, and the final 20 of 100 we use 3 keywords as our query. 
+In both Dense and Sparse Searches, in the 75% of the searches we look for the most similar chunk, in the 25% of it we look for the two most similar chunks.
 
-    For questions; Confirmation, Factoid-type, List-type, Causal, Hypothetical, we use the following prompts for each question concatenated to the common prompt that is
-    Here are the 5 specific prompt for each type of question.
-        prompts = [
-            "You to generate a Yes/No question that require an understanding of a given context and deciding a boolean value for an  answer, e.g., 'Is Paris the capital of France?'. ",
-            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
-            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the capital of France throughout its history?'. ",
-            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
-            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
-    ]
-    It is important to note that based on the question we select a specific prompt from above and concatenate to the common prompt that is not dependent on question type for the mentioned 5 questions. 
-    The common prompt for these questions is below;
-    
-    "You need to use the given text snippet to generate the question!!. You also need to generate an answer for your question. \
+In the below diagram, you can see how we generate Complex Questions from each of our 100 chunks;
+
+<div style="text-align:center"><img src="images/question-generations.png" /></div>
+
+All these different ways of generating complex questions are for having more diverse set of questions and they are all explained in detail this section of Question Generation Process.
+
+We use the available chunked abstracts of documents from pubmed dataset to generate an initial testing-set. [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv)
+
+We make use of prompt engineering and free available api of OpenAI that uses the model [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) to generate questions and their answers from the given chunked abstract. We have also tried other freely available models but they do not offer enough rate for our case. Those models include but not limited to [`Llama 2`](https://huggingface.co/meta-llama), [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). So, we had to continue with gpt-3.5-turbo model.
+In order to generate a question and its answer pair, we need to have a prompt to send to gpt-3.5-turbo model and get its response.
+#### Prompt Engineering
+We create 6 prompts for each question type. The response to these prompts by the model should obey the rule of, question and answer both being inside of quotation marks as if they are strings and they should be returned as a list of 2 strings - ['questions', 'answer']. Having a prompt for each question type is especially useful to know/mark which type of question is generated. This is also beneficial in terms of making a prompt as specific as possible. 
+
+##### Simple Questions: Confirmation, Factoid-type, List-type, Causal, Hypothetical
+For questions; Confirmation, Factoid-type, List-type, Causal, Hypothetical, we use the following prompts for each question concatenated (as a list given below in the script, [`testing_set_generation.py`](data_preprocessing/qa_testing_data_generation/approach1/testing_set_generation.py)). Note: The final prompt for Complex questions in this list will also be used but not as the way the simple questions are used (more on this later).
+```Python    
+prompts = ["You to generate a Yes/No question that require an understanding of a given context and deciding a \
+boolean value for an answer, e.g., 'Is Paris the capital of France?'. ",
+            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. \
+An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
+            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the \
+capital of France throughout its history?'. ",
+            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and \
+elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” \
+Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
+            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario \
+and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
+            "You need to generate a Complex Question: Complex questions require multi-part reasoning by understanding \
+the semantics of multiple text snippets, e.g. 'What cultural and historical factors contributed to the development of the \
+Louvre Museum as a world-renowned art institution?' which requires inferring information from multiple documents to generate an answer."
+]
+```
+
+Each time, one of this question type specific prompts is concatenated to common prompts and a chunk to generate the final prompt to be sent to the model and get a testing-set record. In the below code snippet in [`testing_set_generation.py`](data_preprocessing/qa_testing_data_generation/approach1/testing_set_generation.py), propmt[j] refers to a question type specific prompt given above and chunk refers to the chunk that we want to generate our question based on.
+
+```Python
+prompt = prompts[j] + "You need to use the given text snippet to generate the question!!. You also need to generate an answer for your question. \
 The given text snippet is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
 just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
+```
 
-#### Complex Question Generation:
-- Approach 1:
-    For complex questions, we find one or two most similar chunks to the given chunk. 
-    We find the most similar chunk(s) as following:
-    Each time we take 100 chunks randomly from the processed dataset of chunks and its attributes. Here we make sure that the randomly selected chunks have 4 to 6 keywords. That is because we use 1 to 3 keywords for our similarity search of chunks to generate complex questions in the case of sparse search. As we examined the original processed dataset, we came to a conclusion thaat the more keywords a chunk/abstract has the more generic those keywords are e.g. ... So, we decided to sample from the chunks that have 4-6 keywords for this reason. 
-    We divide the sample into 3 parts with the sizes of 40, 40, 20. 
-    1) In the first 40 records, we do sparse search with just one keyword.
-    2) In the second part that has 40 records, we do the sparse search with two keywords.
-    3) In the final part that has 20 records, we do the sparse search with three keywords.
+##### Complex Questions:
+For Complex questions, we have a few variations. First of all, in order to generate a complex question we need to find one or more similar chunks to the chunk that we have. We should do a similarity search and we use Dense or Sparse search to find similar chunks. In our case, we either look for the most similar chunk or the most two similar chunks.
+###### Dense Search
+We do Dense Search by taking the embedding of our chunk and looking for the chunks that have similar embeddings. In the below code snippet where we do the Dense Search, query_embedding_dense[0].tolist() is the embedding of our chunk and size is the number of similar chunks that we are looking for plus 1 (More on this later). 
+```Python
+search_query_dense = {    
+    "query": {
+        "knn": {
+            "embedding": {
+                "vector": query_embedding_dense[0].tolist(),
+                "k": size
+            }
+        }
+    }
+}
+```
+###### Sparse Search
+We do Sparse Search by taking 1 keyword, 2 keywords or 3 keywords as our query and looking for the chunks that has similar content. In the below code snippet that is used for Sparse Search, query_sparse is the query, and the size is again the number of similar chunks that we are looking for plus 1.
 
-    When we do the dense search for similar chunks, we do not use keywords, but we use the embedding of the chunk to find similar chunks.
-    We do the dense search right after we do the sparse search in our iteration over the records. So we go through the same samples of sizes of 40, 40, 20. 
-    In the first part of the sample that has 40 records. In the first 30 of those records (75%) we look for the most similar chunk. That applies to both sparse and dense searches. 
+```Python
+search_query_sparse = {
+    "query": {
+        "match": {
+            "chunk": query_sparse
+        }
+        },
+    "size": size
+}
+```
+
+We look for one more of the number of chunks we need. That is because of the fact that sometimes the chunk itself may be returned as a similar chunk. So, we handle it by taking one more similar chunk, and if none of the similar chunks is the chunk itself, we take the first one or two similar chunks (depending on how many similar chunks we are looking for), if one of the similar chunks is the chunk itself, we take the other chunk(s).
+
+In the below text snippet, we get the similar chunks and their properties, this is where we consider the case of similar chunk being the chunk itself;
+
+```Python
+def get_similar_chunks(result_of_similarity_search, pmid_original, chunk_id_original):
+    '''
+    This function is used to get the attributes of the similar chunks.
+    It takes the result of a similarity search and,  
+    the pmid and the chunk id of the chunk whose similar chunks should be returned.
+
+    It returns three lists that are;
+    1) list of similar chunks, 2) list of pmid's of those chunks, 3) chunk id's of those chunks
+    '''
+    similar_chunks = [] 
+    similar_chunks_pmids = []
+    similar_chunks_chunk_ids = []
+    for hit in result_of_similarity_search['hits']['hits']:
+        pmid_similar = hit['_source']['pmid']
+        chunk_id_similar = hit['_source']['chunk_id']  
+        if pmid_similar == pmid_original and chunk_id_similar == chunk_id_original: # if the found similar chunk is the chunk itself
+            # print("FOUND ITSELF") # this is for debugging purposes
+            continue
+                    
+        chunk_similar = hit['_source']['chunk']
+
+        similar_chunks.append(chunk_similar)
+        similar_chunks_pmids.append(pmid_similar)
+        similar_chunks_chunk_ids.append(chunk_id_similar)
+    return similar_chunks, similar_chunks_pmids, similar_chunks_chunk_ids
+```
+
+So, by now, we have our similar chunks either from Dense Search or Sparse Search, and now we can create our prompt to be sent to our model for the generation of a Complex Question.
+
+If we want to generate a Complex Question using 2 chunks (original chunk and its most similar) we use the following prompt where prompts[j] is the final prompt that explains what is a complex question, chunk is the original chunk, and chunk2 is its most similar chunk;
+
+```Python
+prompt = prompts[j] + "You need to use the given 2 different given text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first given text snippet is: " + chunk + " The second given text snippet is: " + chunk2 + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
+```
+
+If we want to generate a Complex Question using 3 chunks (original chunk and its two most similar chunks) we use the following prompt where prompts[j] is again one of the origianl prompts that explain Complex Question type, chunk is the original chunk, chunk2 is its most similar chunk, chunk3 is its second most similar chunk;
+
+```Python
+prompt = prompts[j] + "You need to use the given 3 different given text snippets to generate the question!!. You also need to generate an answer for your question. \
+The first giventext snippet is: " + chunk + " The second given text snippet is: " + chunk2 + " The third given text snippet is: " + chunk3 + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You \
+just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
+IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
+```
+
+### A Record to the Initial Test Set
+By now, we have our prompt ready. We can now send it to the gpt-3-5-turbo model and get a question and its answer pair and we do this using the following code snippet;
+
+```Python
+def gpt_3_5_turbo(prompt):
+    '''
+    This function is used to send a prompt to gpt-3-5-turbo model to generate a question and its answer.
+    '''
+    time.sleep(30) # sleep each time before sending any prompt to gpt
+    chat_completion = client_OpenAI.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        model="gpt-3.5-turbo-1106"
+    )
+    reply = chat_completion.choices[0].message.content
+    return reply
+```
+
+The only remaining thing is to write the record to our initial testing set [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). However, before writing it to this set we need to make sure that gpt-3-5-turbo model returned the pair in a valid format e.g. ['question', 'answer'], if not we need to convert it to the correct format and then write it. We do both checking the format of the model returned response and and then writing a record to the initial testing set using the following code snippet;
+```Python
+
+def write_to_test_set(pmid, pmid2, pmid3, 
+                      chunk_id, chunk_id2, chunk_id3,
+                      chunk, chunk2, chunk3,
+                      question_type, reply, similarity_search, keywords_if_complex_and_sparse, generator_model):
+    '''
+    This function is used to check the validity of the reply by the generator model,
+        if necessary change the format of the reply,
+        and write the new record to the testing set
+    '''
+    # pmid pmid2 pmid3 chunk_id chunk_id2 chunk_id3 chunk chunk2 chunk3 question_type question answer 
+    # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
+
+    if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
+        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n\n \
+Original Reply: '{reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+            
+        # writing the warning to a txt file
+        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
+            file.write(warning_while_generation)
+        return
+    try:
+        # Check if the model gave the response in a correct format
+        
+        reply_list = ast.literal_eval(reply)
+        if isinstance(reply_list, list) and all(isinstance(item, str) for item in reply_list):
+            # everything is good, we can add this to our dataset
+            warning_while_generation = "N/A"
+            test_set_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv'
+
+            with open(test_set_file_path, 'a', newline='') as file:
+                csv_writer = csv.writer(file, delimiter='\t')
+                        
+                new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reply_list + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+                csv_writer.writerow(new_record)
+                        
+        else:
+            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID: '{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
+
+            # writing the warning to a txt file
+            with open("data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv", 'a') as file:
+                file.write(warning_while_generation)
+            
+    except (SyntaxError, ValueError):        
+        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
+        
+        reply = "".join(reply) # some 
+        question_start = reply.lower().find("question:")
+        answer_start = reply.find("answer:")
+
+        question = reply[question_start + len("question:"):answer_start].strip()
+        answer = reply[answer_start + len("answer:"):].strip()
+
+        reformatted_reply = [question, answer] # reformatted reply
+
+        test_set_with_warnings_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv'
+
+        with open(test_set_with_warnings_file_path, 'a', newline='') as file:
+            csv_writer = csv.writer(file, delimiter='\t')
+                        
+            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reformatted_reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+            csv_writer.writerow(new_record)
+
+        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
+                file.write(warning_while_generation)
+            
+    return
+```
+
+As explained in the above code snippet, we also keep track of the warnings in the cases of different invalid responses from the model. 
+
+
+#### Generating the Final, Labeled Test-set
+Now we have created an initial test predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv) that has questions, their answer, types and other attributes of the chunks used. However, it does not have predictions/answers by the model that our system is built on. 
+
+So, we create a labeled test-set [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) from our initially generated test-set. We used our llm model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate the predictions/labels for our questions in the original test-set. 
+In the script; [`get_references_predictions.py`](data_preprocessing/qa_evaluation/approach1/get_references_predictions.py) we make calls to our frontend to get the prediction for our questions and then modify the prediction to remove sources as our references generated by [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) do not contain sources;
+```Python
+def get_prediction_from_llm(question):
+    '''
+    This function is used to get the prediction from our llm for the given question.
+    We also modify it here - remove the sources as our references do not contain sources.
+    '''
+    url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
     
-    Althoug we are looking for the most similar chunk, here we do the search with the size of 2. 
-    That is because of the fact that it is perfectly possible to get the chunk itself while we are searching for its similars. If it is the case, we do not consider the chunk itself. If it is not, we take the most similar not considering the remaining similars.
-    
-    In the remaining part of these records - the remaining 10 (25%), we are searching for the two most similar chunks. Similarly, making the search size 3 because of the possibility of getting the chunk itself as its similar.
+    response = requests.get(url)
 
-    That is the same for the remaining two part of the whole sample with the sizes of 40, 20, respectively. We do the search for the most similar chunk for the 75% of the part, and do search for the two most similar chunks for the 25% of the part. 
+    if not response.ok:
+        raise ValueError(f'HTTP error! Status: {response.status_code}')
 
-    The whole idea of dividing the sample to 3 parts with 40, 40, 20 records, respectively is to get similar chunks with a specific number of keywords (1 keyword, 2 keywords, 3 keywords). That is only for the sparse search and has not effect on dense search. 
-
-    [CONTINUE THE WORK FROM HERE!!]
-    Sparse Search: We take 
-    
-    Here is our prompt [for questions other than complex questions]: 
-
-    prompts[i] + "You need to use the given abstract to generate the question!!. You also need to generate an answer for your question. The abstract is: " + chunk + " Remember and be careful: each of the entries in the lists should be a string with quotation marks!! " + "You just give a python list of size 2 with question and its answer for the given abstract at the end. That is like ['a question', 'an answer to that question']. IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER. IF YOU THING THAT THIS KIND OF QUESTION CANNOT BE GENERATED JUST TELL ME 'NA'. DO NOT HALLUSINATE!!!"
-    
-    Here is our prompt(s) [for complex questions with 2 chunks - a chunk and its most similar chunk]
+    original_prediction = response.json()['message']
+    return modify_original_prediciton(original_prediction)
+```
+So, by now, we have question, reference (answer by 'gpt-3-5-turbo'), prediction (answer by our model 'Falcon-7B-Instruct') and the question type for each of the questions that we have. 
+We write these 4 attributes for each question to our final testing test [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) that we can use for evaluation.
 
 
-    In this scenario, prompts[i] is a prompt specific to the question type. Those prompts can be found below:
 
-    prompts = [
-            "You to generate a Yes/No question that require an understanding of a given context and deciding a boolean value for an  answer, e.g., 'Is Paris the capital of France?'. ",
-            "You need to generate a Factoid-type Question [what, which, when, who, how]: These usually begin with a “wh”-word. An answer then is commonly short and formulated as a single sentence. e.g., 'What is the capital of France?'. ",
-            "You need to generate a List-type Question: The answer is a list of items, e.g.,'Which cities have served as the capital of France throughout its history?'. ",
-            "You need to generate a Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., “Why did Paris become the capital of France?” Causal questions have descriptive answers that can range from a few sentences to whole paragraphs.",
-            "You need to generate a Hypothetical Question: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., 'What would happen if Paris airport closes for a day?'.",
-    ]
 
-    By having a prompt for each question type, we know for sure that which type of question is generated. This is also beneficial in terms of making a prompt as specific as possible. 
 
-    With our prompt, we also consider the case of forcing model to generate a question type that is not necessarily good if generated from a particular abstract. So, we include the case of not generating a question type if it is not suitable from the given abstract. 
-
-    Another aspect that we consider is the format of returned answer from the model, we repetatively mention the format in the prompt. However, we expect the model occassionally return the answer in a different format. That is why we check the format of returned result - checking if the whole answer is a list a of strings. We additionally keep the logs of generated questions that are in a incorrect format. We believe this can give additional insights to improve our implementation of question generations.
-
-    We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
-
-    We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
-    
-- Approach 2
+## Test Dataset Generation (Approach 2)
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
     Key Features:
@@ -391,3 +595,15 @@ IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!
 7. Creating the RAG pipeline with the most recent RAG prompt from [`LangChain`](https://www.langchain.com/), setting up the retriever with the proper parameters and experimenting with the metadata of the returned source documents.
 8. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to find the model that we can use in our project.
 9. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions in [`installation_instructions.md`](installation_instructions.md), and creating the high-level diagram of the project.
+
+
+### Paul Dietze
+1. Setting up the initial architecture configuration with 4 containers for frontend, FastApi-based middleware, Elasticsearch and Kibana. Later changed by Abdulghani to [`OpenSearch`](https://opensearch.org/) resulting in `docker-compose.yml`.
+2. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). Also trying to run models locally in a container but then settling for using externally hosted service.
+3. Creating initial FastApi endpoints in `app/frontend/middleware/main.py` to communicate with the first iteration of the NodeJS-based frontend implemented by Sushmitha.
+4. Adjusting FastAPI endpoints to communicate with the second (Svelte-based) frontend iteration. Also creating the functionality
+to check the server setup status and display it in the UI.
+5. Creating a child class `VariableRetriever` to the [`LangChain`](https://www.langchain.com/) `VectorStoreRetriever` in `app/middleware/models.py` to enable post-retrieval filtering of document lists by metadata or keywords as part of a pipeline. This is 
+a functionality that is not explicitly provided by the [`LangChain`](https://www.langchain.com/) library.
+6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters.
+7. Actively particapting in group debugging sessions. Assisting group members in configuring local projects for development.
