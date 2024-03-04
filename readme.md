@@ -26,9 +26,9 @@
 
 The architecture of the project consists of four components that are containerized in [`Docker`](https://www.docker.com/) containers and interconnected using [`Docker`](https://www.docker.com/) internal network that is also accessible using the local host computer. The four components are as follows:
 
-- Front-end web interface to receive user queries
-- Middleware powered by FastAPI to retrieve the documents from OpenSearch, filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
-- OpenSearch for document and vector storage, indexing and retrieval
+- Front-end web interface to receive user queries, powered by [`Svelte`](https://svelte.dev/) framework
+- Middleware powered by [`FastAPI`](https://fastapi.tiangolo.com/) to retrieve the documents from [`OpenSearch`](https://opensearch.org/), filter them, send a prompted question to LLM, process the reply from the LLM and send it back to the user
+- [`OpenSearch`](https://opensearch.org/) for document and vector storage, indexing and retrieval
 
 To the run the project for testing, please follow the steps in the [`installation_instructions.md`](installation_instructions.md)
 
