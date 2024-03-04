@@ -318,7 +318,7 @@ IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!
 
 #### Complex Questions:
 For Complex questions, we have a few variations. First of all, in order to generate a complex question we need to find one or more similar chunks to the chunk that we have. We should do a similarity search and we use Dense or Sparse search to find similar chunks. In our case, we either look for the most similar chunk or the most two similar chunks.
-##### Dense Search
+###### Dense Search
 We do Dense Search by taking the embedding of our chunk and looking for the chunks that have similar embeddings. In the below code snippet where we do the Dense Search, query_embedding_dense[0].tolist() is the embedding of our chunk and size is the number of similar chunks that we are looking for plus 1 (More on this later). 
 ```Python
 search_query_dense = {    
@@ -332,7 +332,7 @@ search_query_dense = {
     }
 }
 ```
-#### Sparse Search
+##### Sparse Search
 We do Sparse Search by taking 1 keyword, 2 keywords or 3 keywords as our query and looking for the chunks that has similar content. In the below code snippet that is used for Sparse Search, query_sparse is the query, and the size is again the number of similar chunks that we are looking for plus 1.
 
 ```Python
@@ -397,21 +397,114 @@ The first giventext snippet is: " + chunk + " The second given text snippet is: 
 just give a python list of size 2 with question and its answer for the given chunk at the end. That is like ['a question', 'an answer to that question']. \
 IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!!"
 ```
-UNTIL HERE IS NEW!!
+
+#### A Record to the Initial Test Set
+By now, we have our prompt ready. We can now send it to the gpt-3-5-turbo model and get a question and its answer pair and we do this using the following code snippet;
+
+```Python
+def gpt_3_5_turbo(prompt):
+    '''
+    This function is used to send a prompt to gpt-3-5-turbo model to generate a question and its answer.
+    '''
+    time.sleep(30) # sleep each time before sending any prompt to gpt
+    chat_completion = client_OpenAI.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        model="gpt-3.5-turbo-1106"
+    )
+    reply = chat_completion.choices[0].message.content
+    return reply
+```
+
+The only remaining thing is to write the record to our initial testing set [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). However, before writing it to this set we need to make sure that gpt-3-5-turbo model returned the pair in a valid format e.g. ['question', 'answer'], if not we need to convert it to the correct format and then write it. We do both checking the format of the model returned response and and then writing a record to the initial testing set using the following code snippet;
+```Python
+
+def write_to_test_set(pmid, pmid2, pmid3, 
+                      chunk_id, chunk_id2, chunk_id3,
+                      chunk, chunk2, chunk3,
+                      question_type, reply, similarity_search, keywords_if_complex_and_sparse, generator_model):
+    '''
+    This function is used to check the validity of the reply by the generator model,
+        if necessary change the format of the reply,
+        and write the new record to the testing set
+    '''
+    # pmid pmid2 pmid3 chunk_id chunk_id2 chunk_id3 chunk chunk2 chunk3 question_type question answer 
+    # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
+
+    if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
+        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n\n \
+Original Reply: '{reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+            
+        # writing the warning to a txt file
+        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
+            file.write(warning_while_generation)
+        return
+    try:
+        # Check if the model gave the response in a correct format
+        
+        reply_list = ast.literal_eval(reply)
+        if isinstance(reply_list, list) and all(isinstance(item, str) for item in reply_list):
+            # everything is good, we can add this to our dataset
+            warning_while_generation = "N/A"
+            test_set_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv'
+
+            with open(test_set_file_path, 'a', newline='') as file:
+                csv_writer = csv.writer(file, delimiter='\t')
+                        
+                new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reply_list + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+                csv_writer.writerow(new_record)
+                        
+        else:
+            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
+THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID: '{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
+
+            # writing the warning to a txt file
+            with open("data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv", 'a') as file:
+                file.write(warning_while_generation)
+            
+    except (SyntaxError, ValueError):        
+        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
+        
+        reply = "".join(reply) # some 
+        question_start = reply.lower().find("question:")
+        answer_start = reply.find("answer:")
+
+        question = reply[question_start + len("question:"):answer_start].strip()
+        answer = reply[answer_start + len("answer:"):].strip()
+
+        reformatted_reply = [question, answer] # reformatted reply
+
+        test_set_with_warnings_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv'
+
+        with open(test_set_with_warnings_file_path, 'a', newline='') as file:
+            csv_writer = csv.writer(file, delimiter='\t')
+                        
+            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
+                              question_type] + reformatted_reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
+                
+            csv_writer.writerow(new_record)
+
+        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
+        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
+                file.write(warning_while_generation)
+            
+    return
+```
+
+As explained in the above code snippet, we also keep track of the warnings in the cases of different invalid responses from the model. 
 
 
+#### Generating the Final, Labeled Test-set
+Now we have created an initial test predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv) that has questions, their answer, types and other attributes of the chunks used. However, it does not have predictions/answers by the model that our system is built on. 
 
-    [CONTINUE THE WORK FROM HERE!!]
-  
-    
-
-    Another aspect that we consider is the format of returned answer from the model, we repetatively mention the format in the prompt. However, we expect the model occassionally return the answer in a different format. That is why we check the format of returned result - checking if the whole answer is a list a of strings. We additionally keep the logs of generated questions that are in a incorrect format. We believe this can give additional insights to improve our implementation of question generations.
-
-    We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
-
-    We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
-
-We created a labeled test-set [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) from our initially generated test-set without predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). We used our llm model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate the predictions/labels for our questions in the original test-set. In the script; [`get_references_predictions.py`](data_preprocessing/qa_evaluation/approach1/get_references_predictions.py) we make calls to our frontend to get the prediction for our questions and then modify the prediction to remove sources as our references generated by [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo);
+So, we create a labeled test-set [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) from our initially generated test-set. We used our llm model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate the predictions/labels for our questions in the original test-set. 
+In the script; [`get_references_predictions.py`](data_preprocessing/qa_evaluation/approach1/get_references_predictions.py) we make calls to our frontend to get the prediction for our questions and then modify the prediction to remove sources as our references generated by [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo);
 ```Python
 def get_prediction_from_llm(question):
     '''
@@ -428,10 +521,14 @@ def get_prediction_from_llm(question):
     original_prediction = response.json()['message']
     return modify_original_prediciton(original_prediction)
 ```
+So, by now, we have question, reference (answer by 'gpt-3-5-turbo'), prediction (answer by our model 'Falcon-7B-Instruct') and the question type for each of the questions that we have. 
+We write these 4 attributes for each question to our final testing test [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) that we can use for evaluation.
 
 
 
-- Approach 2
+
+
+## Test Dataset Generation - Approach 2
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
     Key Features:
