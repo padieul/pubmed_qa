@@ -258,18 +258,43 @@ The difference in the scores between evaluation metrics such as BERTScore, BLEU 
 
 Each metric has its own strengths, weaknesses, and scoring criteria, which can lead to variations in the scores obtained for the same generated text. Therefore, it's normal to observe differences in the scores between these evaluation metrics. It's important to consider the specific characteristics of each metric and interpret the scores in context to understand the quality of the generated text comprehensively.
 
+### Evalutaion of the first Dataset
+Evalutation of the main test-set that contains 741 questions total;
+
+
+#### BLUE Scores
+#### ROUGE Scores
+#### BERT Scores
+
 ## Test Dataset Generation
-    Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts.
-    1) Yes/No Questions: these are the questions that essentially require a yes or no answer e.g., “Is Paris the capital of France?”.
-    2) Factoid-type Questions [what, which, when, who, how]: These questions usually begin with a “wh”-word. An answer to these questions is commonly short and formulated as a single sentence. In some cases, contents of documents already answers the question, e.g., “What is the capital of France?”, where a sentence from Wikipedia answers the question.
-    3) List-type Questions: The answer to this type of questions is a list of items, e.g.,“Which cities have served as the capital of France throughout its history?”. If the exact list of items are already found in documents, answer generation is not necessary. 
-    4) Causal Questions [why or how]: Causal questions usually require reasons, explanations, and elaborations on particular objects or events in the answers, e.g., “Why did Paris become the capital of France?”
-    5) Hypothetical Questions: These questions describe a hypothetical scenario and usually start with “what would happen if”, e.g., “What would happen if Paris airport closes for a day?”. It is usually hard to get a good accuracy on answering to these questions. In our setting, the answer is usually expected not to be reliable as it is a medical domain.
-    6) Complex Questions: These questions ususally reuquire requires multi-part reasoning by understanding the semantics of multiple text snippets or documents to generate a correct answer, e.g., “What cultural and historical factors contributed to the development of the Louvre Museum as a world-renowned art institution?”, which requires taking information from multiple documents into account while generating an answer. -- In our case, we have not implemented generation of these type of questions at this stage of our project because its generation requires finding similarity between multiple documents since taking multiple documents that do not relate each other results in poor questions. However, we consider generation of these question in the next stages of our project.
+    Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts; 1) Yes/No Questions, 2) Factoid-type Questions [what, which, when, who, how], 3) List-type Questions, 4) Causal Questions [why or how], 5) Hypothetical Questions, 6) Complex Questions
 
 ### Question Generation Process:
-    We use the available chunked abstracts of documents from pubmed dataset to generate questions. We make use of prompt engineering and free available api of OpenAI that uses the model "gpt-3.5-turbo-1106" to generate questions from the given abstract.
-    We have also tried other freely available models but they do not offer enough rate for our case. So, we had to continue with gpt-3.5-turbo model.
+We use the available chunked abstracts of documents from pubmed dataset to generate an initial testing-set with questions, their answers, and some other properties such as pmid's, chunk_id's, chunks, question_type's. We make use of prompt engineering and free available api of OpenAI that uses the model [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) to generate questions and their answers from the given abstract. We have also tried other freely available models but they do not offer enough rate for our case. Those models include but not limited to [`Llama 2`](https://huggingface.co/meta-llama), [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). So, we had to continue with gpt-3.5-turbo model.
+
+
+```Python    
+def gpt_3_5_turbo(prompt):
+    '''
+    This function is used to send a prompt to gpt-3-5-turbo model to generate a question and its answer.
+    '''
+    time.sleep(30) # sleep each time before sending any prompt to gpt
+    chat_completion = client_OpenAI.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        model="gpt-3.5-turbo-1106"
+    )
+    reply = chat_completion.choices[0].message.content
+    return reply
+```
+
+
+
+
     One of 6 prompts for each question type is used along with a given chunks (chunks in the case of complex questions) to generate questions. With the generated question, an answer to that question is also generated. The result of this prompt should obey the rule of question and answer both being inside of quotation marks as if they are strings. They should be returned as a list of 2 strings. These 2 rules are mentioned a few times in the prompt.
 
     For questions; Confirmation, Factoid-type, List-type, Causal, Hypothetical, we use the following prompts for each question concatenated to the common prompt that is
@@ -341,7 +366,27 @@ IT IS SOO IMPORTANT TO GIVE ME A LIST OF 2 STRINGS THAT IS QUESTION AND ANSWER!!
     We use PMID's of the documents to know exactly which document a particular question is generated. This is especially useful if we want to run our implementation multiple times as we do not want to generate questions from already processed documents. That is why we keep track of processed documents with the help of their PMID's. 
 
     We store PMID of the abstract, abstract, question type, question and its answer in a csv file.
+
+We created a labeled test-set [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) from our initially generated test-set without predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). We used our llm model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate the predictions/labels for our questions in the original test-set. In the script; [`get_references_predictions.py`](data_preprocessing/qa_evaluation/approach1/get_references_predictions.py) we make calls to our frontend to get the prediction for our questions and then modify the prediction to remove sources as our references generated by [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo);
+```Python
+def get_prediction_from_llm(question):
+    '''
+    This function is used to get the prediction from our llm for the given question.
+    We also modify it here - remove the sources as our references do not contain sources.
+    '''
+    url = f'http://localhost:8000/retrieve_documents_dense?query_str={question}'
     
+    response = requests.get(url)
+
+    if not response.ok:
+        raise ValueError(f'HTTP error! Status: {response.status_code}')
+
+    original_prediction = response.json()['message']
+    return modify_original_prediciton(original_prediction)
+```
+
+
+
 - Approach 2
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
