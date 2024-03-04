@@ -207,7 +207,8 @@ The filtering logic as well as the criteria by which a set of documents should b
 
 ## User Interface
 
-The Frontend Framework consists of two main Svelte files crucial for the operation of a web-based chatbot application. Utilizing [`Svelte`](https://svelte.dev/), a modern frontend compiler, enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.Svelte provides powerful, yet easy-to-use tools for adding transitions and animations, enhancing the user experience without the need for external libraries. The files are:
+The final iteration of our user interface employs the [`Svelte`](https://svelte.dev/) framework, a modern frontend compiler, 
+which enhances the development experience by offering a simpler and more intuitive syntax compared to traditional frameworks. This decision was made because it is one of the most popular and modern frameworks currently used. Unlike frameworks that use a Virtual DOM, Svelte compiles components to highly efficient imperative code that updates the DOM when the state of the application changes. This results in faster initial loads and smoother runtime performance.
 
 ### File Descriptions
 
@@ -560,7 +561,8 @@ The Test data set is then manually checked for any discrepancies using the open-
 to check the server setup status and display it in the UI.
 5. Creating a child class `VariableRetriever` to the [`LangChain`](https://www.langchain.com/) `VectorStoreRetriever` in `app/middleware/models.py` to enable post-retrieval filtering of document lists by metadata or keywords as part of a pipeline. This is 
 a functionality that is not explicitly provided by the [`LangChain`](https://www.langchain.com/) library.
-6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters.
+6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters. Also refactoring and finalizing 
+all previously implemented UI elements. 
 7. Actively particapting in group debugging sessions. Assisting group members in configuring local projects for development.
 8. Adding the documentation for the tasks mentioned above in [`readme.md`](readme.md) and the how-to instructions UI screenshots in [`installation_instructions.md`](installation_instructions.md)
 
