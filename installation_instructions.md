@@ -40,12 +40,21 @@ Please follow the the steps below to setup the infrastructure for the RAG projec
 
 1. Open the front-end main webpage [`http://localhost:3000/`](http://localhost:3000/) and wait for the RAG pipeline to be fully initialized
 
-    <div style="text-align:center"><img src="images/backend_init.png" /></div>
+    <div style="text-align:center"><img src="images/screen1_new.png" /></div>
 
-1. Once the initialization is done, you will see that the server is ready
+2. Once the initialization is done, you will see that the server is ready
 
-    <div style="text-align:center"><img src="images/server_ready.png" /></div>
+    <div style="text-align:center"><img src="images/screen2_new.png" /></div>
 
-1. Now you can ask the question you want
+3. Now you can ask the question you want
 
-    <div style="text-align:center"><img src="images/question.png" /></div>
+    <div style="text-align:center"><img src="images/screen3_new.png" /></div>
+
+4. You can also specify filtering options for particular publication years, titles and/or keywords. This can either be done only with one filter for a certain field or with up to 3 filters at the same time. Although, obviously, by specifying a certain title, there will be only one result left:
+
+    <div style="text-align:center"><img src="images/screen4_new.png" /></div>
+
+    <div style="text-align:center"><img src="images/screen5_new.png" /></div>
+
+
+

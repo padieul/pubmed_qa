@@ -427,9 +427,12 @@ def get_prediction_from_llm(question):
 
 
 ### Paul Dietze
-
-1. Setting up the initial architecture configuration with 4 containers for frontend, fastapi-based middleware, Elasticsearch and Kibana. Later changed by Abdulghani to [`OpenSearch`](https://opensearch.org/) resulting in `docker-compose.yml`.
-
+1. Setting up the initial architecture configuration with 4 containers for frontend, FastApi-based middleware, Elasticsearch and Kibana. Later changed by Abdulghani to [`OpenSearch`](https://opensearch.org/) resulting in `docker-compose.yml`.
 2. Experimenting with multiple language models like [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct). Also trying to run models locally in a container but then settling for using externally hosted service.
-
-3.
+3. Creating initial FastApi endpoints in `app/frontend/middleware/main.py` to communicate with the first iteration of the NodeJS-based frontend implemented by Sushmitha.
+4. Adjusting FastAPI endpoints to communicate with the second (Svelte-based) frontend iteration. Also creating the functionality
+to check the server setup status and display it in the UI.
+5. Creating a child class `VariableRetriever` to the [`LangChain`](https://www.langchain.com/) `VectorStoreRetriever` in `app/middleware/models.py` to enable post-retrieval filtering of document lists by metadata or keywords as part of a pipeline. This is 
+a functionality that is not explicitly provided by the [`LangChain`](https://www.langchain.com/) library.
+6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters.
+7. Actively particapting in group debugging sessions. Assisting group members in configuring local projects for development.
