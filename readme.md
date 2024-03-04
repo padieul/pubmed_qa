@@ -284,6 +284,15 @@ Total Questions: 741;
 
 We used three metrics that are mentioned above; BLEU Score, ROUGE Score, BERT Score.
 
+Having a diverse set of questions, we come to a conclusion that the more context we have while generating references and predictions by different models, the more close references and predictions get to each other. 
+
+In Confirmation Questions, we have the least amount of context given to the models, and interestingly we get the lowest scores for Confirmation Questions. 
+In Complex Questions Generated using 3 Chunks, we have the most amount of context given to the models, and for these questions we have the highest scores.
+
+We have better results for Complex Questions Generated using Dense Search than the ones generated using Sparse Search. This is because in our RAG Architecture, we use Dense Search to retrieve related chunks to generate a prediction. So, the references are generated using similar chunks by Dense Search as like predictions.
+
+You can see the scores, and some details why these results are returned by the metrics, below;
+
 #### BLEU Scores 
 In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions.
 
@@ -305,6 +314,13 @@ As we can see ROUGE Scores are better than the BLEU Scores. This is because ROUG
 It is important to mention that, the ROUGE Scores are still not good enough. This is again because of the vocabulary differences, the references and generated predictions may mean the same thing but have different word choices. As like BLEU, ROUGE does not campture the meaning of word and sentence semantics.
 
 #### BERT Scores
+In the chart given below, we have BERT Scores - F1, Precision, Recall.
+
+<div style="text-align:center"><img src="images/BERT-Scores.png" /></div>
+
+As we can see th BERT Scores are relly impressive with an F1 score for the full testing set being 0.87.
+This is because of the fact that BERT Score utilizes contextualized embeddings to represent the tokens meaning unlike BLEU and ROUGE, it captures word and sentence semantics. BERT Score considers contextual information, allowing it to handle variations in word order and syntactic structures more effectively. Additionally, BERT models used to campute BERT Scores are trained on vast and diverse datasets, which results in a more comprehensive understanding of language.
+
 
 ## Test Dataset Generation Approach 1
 Our goal was to generate a testing dataset that contain the following types of questions based on the given abstracts; 1) Yes/No Questions, 2) Factoid-type Questions [what, which, when, who, how], 3) List-type Questions, 4) Causal Questions [why or how], 5) Hypothetical Questions, 6) Complex Questions
@@ -568,7 +584,7 @@ We write these 4 attributes for each question to our final testing test [`refere
 
 
 
-## Test Dataset Generation (Approach 2)
+## Test Dataset Generation Approach 2
     The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
     Key Features:
