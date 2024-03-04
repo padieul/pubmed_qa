@@ -620,12 +620,12 @@ The prompt given was:
   Hypothetical Questions: These questions describe a hypothetical scenario and usually start with "what would happen if", e.g., "What would happen if Paris airport closes for a day?". The reliability and           accuracy of answers to these questions are typically low in most application settings.
 ```
 ### Complex Questions:
-    The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
-    Key Features:
-    Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
-    Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
-    Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
+Key Features:
+Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
+Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
+Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
 
 How It Works:
 Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
@@ -700,4 +700,4 @@ a functionality that is not explicitly provided by the [`LangChain`](https://www
 3. Built a Python script designed to craft complex questions that require multi-part reasoning. This script analyses semantics across multiple text snippets to formulate questions that test the chatbot's ability to generate accurate and contextually relevant answers.[`gen_complex.py`](data_preprocessing/qa_testing_data_generation/approach2/gen_complex.py)
 4. Question generated using GPT 3.5 model were then manually reviewed and annotated using [`Doccano`](https://github.com/doccano/doccano), an open-source text annotation tool. Doccano facilitated the sequence-to-sequence task annotations, ensuring the quality and relevance of the generated questions through human validation.
 5. Developed a Python script to systematically assess the effectiveness of the chatbot's answer generation. This script evaluates the chatbot's performance in providing coherent and contextually appropriate responses. [`evaluation_metrics.py`](data_preprocessing/qa_evaluation/approach2/evaluation_metrics.py)
-6. Conducted comprehensive system testing using the [`Cucumber/BDD`](https://cucumber.io/) Framework to validate the chatbot's performance across the entire pipeline. This testing ensured that the chatbot operates effectively from initial user input through to the final response generation, highlighting areas of strength and opportunities for improvement.
+6. Conducted comprehensive system testing to validate the chatbot's performance across the entire pipeline. This testing ensured that the chatbot operates effectively from initial user input through to the final response generation, highlighting areas of strength and opportunities for improvement.
