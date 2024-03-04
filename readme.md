@@ -13,6 +13,9 @@
   - [Text Generation](#text-generation)
   - [Evaluation Metrics](#evaluation-metrics)
     - [Evalutaion of the first Data Set](#evalutaion-of-the-first-data-set)
+        - [BLEU Scores Test Set 1](#bleu-scores-test-set-1)
+        - [ROUGE Scores Test Set 1](#rouge-scores-test-set-1)
+        - [BERT Scores Test Set 1](#bert-scores-test-set-1)
   - [Test Dataset Generation Approach 1](#test-dataset-generation-approach-1)
     - [Question Generation Process](#question-generation-process)
     - [Records to the Initial Test Set](#records-to-the-initial-test-set)
@@ -320,7 +323,7 @@ We have better results for Complex Questions Generated using Dense Search than t
 
 You can see the scores, and some details why these results are returned by the metrics, below;
 
-#### BLEU Scores 
+#### BLEU Scores Test Set 1
 In the chart given below, we have BLEU Score and 4 Precision Scores for different sets of questions.
 
 <div style="text-align:center"><img src="images/BLUE-Scores.png" /></div>
@@ -331,7 +334,7 @@ It doesn't account for differences in recall or consider synonyms effectively. I
 
 As an example, in Confirmation Questions, [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo) mostly generates answers as either 'Yes' or 'No', but our model [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) generates additional content. Even though the meaning of the answers are same. We got the lowest BLEU Score for Confirmation Questions as can be seen from the chart above.
 
-#### ROUGE Scores
+#### ROUGE Scores Test Set 1
 In the chart given below, we have 4 ROUGE Scores.
 
 <div style="text-align:center"><img src="images/ROUGE-Scores.png" /></div>
@@ -340,7 +343,7 @@ As we can see ROUGE Scores are better than the BLEU Scores. This is because ROUG
 
 It is important to mention that, the ROUGE Scores are still not good enough. This is again because of the vocabulary differences, the references and generated predictions may mean the same thing but have different word choices. As like BLEU, ROUGE does not campture the meaning of word and sentence semantics.
 
-#### BERT Scores
+#### BERT Scores Test Set 1
 In the chart given below, we have BERT Scores - F1, Precision, Recall.
 
 <div style="text-align:center"><img src="images/BERT-Scores.png" /></div>
@@ -429,36 +432,13 @@ search_query_sparse = {
 }
 ```
 
-We look for one more of the number of chunks we need. That is because of the fact that sometimes the chunk itself may be returned as a similar chunk. So, we handle it by taking one more similar chunk, and if none of the similar chunks is the chunk itself, we take the first one or two similar chunks (depending on how many similar chunks we are looking for), if one of the similar chunks is the chunk itself, we take the other chunk(s).
+We look for one more of the number of chunks we need. That is because of the fact that sometimes the chunk itself may be returned as a similar chunk. So, we handle it by taking one more similar chunk, and if none of the similar chunks is the chunk itself, we take the first one or two similar chunks (depending on how many similar chunks we are looking for), if one of the similar chunks is the chunk itself, we take the other chunk(s). 
 
-In the below text snippet, we get the similar chunks and their properties, this is where we consider the case of similar chunk being the chunk itself;
+In the get_similar_chunks() function in[`testing_set_generation.py`](data_preprocessing/qa_testing_data_generation/approach1/testing_set_generation.py), we get the similar chunks and their properties, this is where we consider the case of similar chunk being the chunk itself using the below code snippet from the function;
 
 ```Python
-def get_similar_chunks(result_of_similarity_search, pmid_original, chunk_id_original):
-    '''
-    This function is used to get the attributes of the similar chunks.
-    It takes the result of a similarity search and,  
-    the pmid and the chunk id of the chunk whose similar chunks should be returned.
-
-    It returns three lists that are;
-    1) list of similar chunks, 2) list of pmid's of those chunks, 3) chunk id's of those chunks
-    '''
-    similar_chunks = [] 
-    similar_chunks_pmids = []
-    similar_chunks_chunk_ids = []
-    for hit in result_of_similarity_search['hits']['hits']:
-        pmid_similar = hit['_source']['pmid']
-        chunk_id_similar = hit['_source']['chunk_id']  
-        if pmid_similar == pmid_original and chunk_id_similar == chunk_id_original: # if the found similar chunk is the chunk itself
-            # print("FOUND ITSELF") # this is for debugging purposes
-            continue
-                    
-        chunk_similar = hit['_source']['chunk']
-
-        similar_chunks.append(chunk_similar)
-        similar_chunks_pmids.append(pmid_similar)
-        similar_chunks_chunk_ids.append(chunk_id_similar)
-    return similar_chunks, similar_chunks_pmids, similar_chunks_chunk_ids
+if pmid_similar == pmid_original and chunk_id_similar == chunk_id_original: # if the found similar chunk is the chunk itself
+    continue
 ```
 
 So, by now, we have our similar chunks either from Dense Search or Sparse Search, and now we can create our prompt to be sent to our model for the generation of a Complex Question.
@@ -503,85 +483,7 @@ def gpt_3_5_turbo(prompt):
     return reply
 ```
 
-The only remaining thing is to write the record to our initial testing set [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). However, before writing it to this set we need to make sure that gpt-3-5-turbo model returned the pair in a valid format e.g. ['question', 'answer'], if not we need to convert it to the correct format and then write it. We do both checking the format of the model returned response and and then writing a record to the initial testing set using the following code snippet;
-```Python
-
-def write_to_test_set(pmid, pmid2, pmid3, 
-                      chunk_id, chunk_id2, chunk_id3,
-                      chunk, chunk2, chunk3,
-                      question_type, reply, similarity_search, keywords_if_complex_and_sparse, generator_model):
-    '''
-    This function is used to check the validity of the reply by the generator model,
-        if necessary change the format of the reply,
-        and write the new record to the testing set
-    '''
-    # pmid pmid2 pmid3 chunk_id chunk_id2 chunk_id3 chunk chunk2 chunk3 question_type question answer 
-    # similarity_search keywords_if_complex_and_sparse generator_model warning_while_generation
-
-    if reply.lower() == "na" or ("na" in reply.lower() and len(reply) < 10):
-        warning_while_generation = f"WARNING: GENERATED TEXT IS 'N/A'\n\n \
-Original Reply: '{reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
-            
-        # writing the warning to a txt file
-        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
-            file.write(warning_while_generation)
-        return
-    try:
-        # Check if the model gave the response in a correct format
-        
-        reply_list = ast.literal_eval(reply)
-        if isinstance(reply_list, list) and all(isinstance(item, str) for item in reply_list):
-            # everything is good, we can add this to our dataset
-            warning_while_generation = "N/A"
-            test_set_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv'
-
-            with open(test_set_file_path, 'a', newline='') as file:
-                csv_writer = csv.writer(file, delimiter='\t')
-                        
-                new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
-                              question_type] + reply_list + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
-                
-                csv_writer.writerow(new_record)
-                        
-        else:
-            warning_while_generation = f"WARNING: GENERATION IS NOT IN THE CORRECT FORMAT - LIST ELEMENTS ARE NOT STRINGS\n \
-THIS IS A RARE CASE THAT CURRENTLY HAS NO SOLUTION\n\nPMID: '{pmid}', CHUNK ID: '{chunk_id}', Question Type: '{question_type}'\n\n\n\n"
-
-            # writing the warning to a txt file
-            with open("data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv", 'a') as file:
-                file.write(warning_while_generation)
-            
-    except (SyntaxError, ValueError):        
-        warning_while_generation = f"WARNING: A LIST IS NOT GENERATED! - REFORMATTED TO A LIST FORMAT [MAY NOT BE ACCURATE REFORMMATING]"
-        
-        reply = "".join(reply) # some 
-        question_start = reply.lower().find("question:")
-        answer_start = reply.find("answer:")
-
-        question = reply[question_start + len("question:"):answer_start].strip()
-        answer = reply[answer_start + len("answer:"):].strip()
-
-        reformatted_reply = [question, answer] # reformatted reply
-
-        test_set_with_warnings_file_path = 'data_preprocessing/qa_testing_data_generation/approach1/dataset_with_warnings.csv'
-
-        with open(test_set_with_warnings_file_path, 'a', newline='') as file:
-            csv_writer = csv.writer(file, delimiter='\t')
-                        
-            new_record = [pmid, pmid2, pmid3, chunk_id, chunk_id2, chunk_id3, chunk, chunk2, chunk3, 
-                              question_type] + reformatted_reply + [similarity_search, keywords_if_complex_and_sparse, generator_model, warning_while_generation]
-                
-            csv_writer.writerow(new_record)
-
-        warning_while_generation += f"\n\nOriginal Reply: '{reply}'\n\nReformatted Reply: '{reformatted_reply}'\n\nPMID: {pmid}, CHUNK ID: {chunk_id}, Question Type: {question_type}\n\n\n\n"
-        with open("data_preprocessing/qa_testing_data_generation/approach1/warnings.txt", 'a') as file:
-                file.write(warning_while_generation)
-            
-    return
-```
-
-As explained in the above code snippet, we also keep track of the warnings in the cases of different invalid responses from the model. 
-
+The only remaining thing is to write the record to our initial testing set [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv). However, before writing it to this set we need to make sure that gpt-3-5-turbo model returned the pair in a valid format e.g. ['question', 'answer'], if not we need to convert it to the correct format and then write it. We do both checking the format of the model returned response and and then writing a record to the initial testing set using the  write_to_test_set() function in [`testing_set_generation.py`](data_preprocessing/qa_testing_data_generation/approach1/testing_set_generation.py). As explained in the function, we also keep track of the warnings in the cases of different invalid responses from the model and try to convert them to the correct format or drop them. 
 
 #### Generating the Labeled Test Set
 Now we have created an initial test predictions/labels [`test_dataset.csv`](data_preprocessing/qa_testing_data_generation/approach1/test_dataset.csv) that has questions, their answer, types and other attributes of the chunks used. However, it does not have predictions/answers by the model that our system is built on. 
@@ -608,24 +510,16 @@ So, by now, we have question, reference (answer by 'gpt-3-5-turbo'), prediction 
 We write these 4 attributes for each question to our final testing test [`references_predictions.csv`](data_preprocessing/qa_evaluation/approach1/references_predictions.csv) that we can use for evaluation.
 
 
-## Test Dataset Generation Approach 2
-To generate a diverse test dataset, we employed GPT-3.5 model and prompt engineering techniques, focusing on question types such as Confirmation, Casual, Factoid, List Type, and Hypothetical. By providing an abstract, we prompted the AI to analyze the content and generate questions with corresponding short answers in specified formats.
-The prompt given was: 
-```
-  You are an AI assistant. Analyze the following abstract: "CLINICAL CHARACTERISTICS: Achondroplasia is the most common cause of disproportionate short stature. Affected individuals have rhizomelic shortening of   the limbs, macrocephaly, and characteristic facial features with frontal bossing and midface retrusion. In infancy, hypotonia is typical, and the acquisition of developmental motor milestones is often both       aberrant in pattern and delayed. Intelligence and lifespan are usually near normal, although craniocervical junction compression increases the risk of... and so on." Generate 5 questions and short answers in     the following formats:
-  Confirmation Questions [yes or no]: Yes/No questions require an understanding of a given context and deciding a boolean value for an answer, e.g., "Is Paris the capital of France?"
-  Factoid-type Questions [what, which, when, who, how]: These usually begin with a "wh"-word. An answer is commonly short and formulated as a single sentence. In some cases, returning a snippet of a document’s     text already answers the question, e.g., "What is the capital of France?", where a sentence from Wikipedia answers the question.
-  List-type Questions: The answer is a list of items, e.g., "Which cities have served as the capital of France throughout its history?". Answering such questions rarely requires any answering generation if the     exact list is stored in some document in the corpus already.
-  Causal Questions [why or how]: Causal questions seek reasons, explanations, and elaborations on particular objects or events, e.g., "Why did Paris become the capital of France?" Causal questions have             descriptive answers that can range from a few sentences to whole paragraphs.
-  Hypothetical Questions: These questions describe a hypothetical scenario and usually start with "what would happen if", e.g., "What would happen if Paris airport closes for a day?". The reliability and           accuracy of answers to these questions are typically low in most application settings.
-```
-### Complex Questions:
-The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
 
-Key Features:
-Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
-Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
-Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
+
+
+## Test Dataset Generation Approach 2
+    The [`gen_complex.py`](data_preprocessing\qa_testing_data_generation\approach2\gen_complex.py)script is designed to generate complex questions based on pairs of scientific abstracts with overlapping keywords. It utilizes the OpenAI GPT-3.5 API to create questions that require understanding the semantics of both abstracts. The process involves reading abstracts from a CSV file, identifying pairs with a significant number of common keywords, and then using these pairs to generate questions aimed at testing comprehension and reasoning abilities.
+
+    Key Features:
+    Safe Literal Evaluation: Safely evaluates strings to Python literals, ensuring that malformed strings are handled gracefully.
+    Complex Question Generation: Leverages GPT-3.5 model to formulate complex questions that require multi-part reasoning, enhancing the depth of understanding required to answer.
+    Pair Extraction Based on Keywords: Identifies abstract pairs with a substantial overlap in keywords, indicating potential thematic or semantic connections.
 
 How It Works:
 Reading Data: The script reads abstracts and their associated keywords from a specified CSV file.
@@ -639,23 +533,6 @@ Specify the input CSV file path containing the abstracts and keywords.
 Define the output CSV file path where the generated questions will be saved.
 Run the script to produce a dataset of complex questions based on scientific abstracts.
 The Test data set is then manually checked for any discrepancies using the open-source text annotation tool [`Doccano`](https://github.com/doccano/doccano)
-
-### Evaluation for Second Data set:
-The Test Data Set along with the expected answer and Actual answer generated by the Chatbot are the evaluated using the following evaluation metrics BertScore, BLEU and ROUGE using python script [`evaluation_metrics.py`](data_preprocessing/qa_evaluation/approach2/evaluation_metrics.py). 
-| Evaluation Metric        | Score                 |
-|---------------|-----------------------|
-| BertScore_F1  | 0.8812079459428788    |
-| Bleu_Score    | 0.11598443526096862   |
-| Rouge_L_F1    | 0.27421367041749906   |
-
-
-1. BertScore_F1 (0.8812079459428788): BertScore computes the similarity of two sentences as a score between 0 and 1, with 1 being a perfect match. It uses contextual embeddings from models like BERT to capture the meaning of words in context. A high BertScore_F1 suggests that the chatbot's answers were semantically similar to the expected answers, indicating that the chatbot was able to capture the essence or meaning of the expected responses quite well.
-2. Bleu_Score (0.11598443526096862): BLEU score, on the other hand, is a precision-based metric that compares n-grams of the chatbot's answers with those of the expected answers. It heavily penalizes texts that are too short or diverge significantly from the reference n-grams. A low Bleu_Score indicates that the chatbot's answers might not have included the exact phrases or the specific sequence of words expected, suggesting a lack of exact word-for-word match with the reference texts.
-3. Rouge_L_F1 (0.27421367041749906): ROUGE-L measures the longest common subsequence between the generated text and the reference text, accounting for the order of words. A moderate score here suggests that there were some sequences of words in the chatbot's responses that matched the expected answers, but it wasn't consistent or comprehensive across all responses.
-
-The disparity between these scores can be attributed to the different emphases of each metric: BertScore emphasizes semantic similarity, BLEU emphasizes precise word matches and n-gram overlap, and ROUGE-L focuses on the longest ordered sequence of words. The high BertScore_F1 compared to the lower BLEU and ROUGE-L scores suggests that while the chatbot was able to understand and respond with semantically relevant answers, it struggled to replicate the exact phrasing or sequence of words found in the expected answers. This could indicate that the chatbot is effective in grasping the meaning of prompts and generating contextually appropriate responses, but it may not always use the same wording as a human would, impacting its BLEU and ROUGE-L scores.
-
-
 
     [TALK ABOUT API LIMITATIONS IN SOMEWHERE HERE]
 
@@ -692,8 +569,9 @@ a functionality that is not explicitly provided by the [`LangChain`](https://www
 1. Generated the testing set with 741 total question and answer pairs, including 4 types of Simple Questions: Confirmation, Factoid-type, List-type, Causal, Hypothetical and 4 types of Complex Questions: Complex Questions Generated using Sparse Search, Complex Questions Generated using Dense Search. Complex Questions Generated using 2 chunks, Complex Questions Generated using 3 chunks.
 2. Experimented with different models including [`gpt-3.5-turbo-1106`](https://platform.openai.com/docs/models/gpt-3-5-turbo), [`Llama 2`](https://huggingface.co/meta-llama) and [`Falcon-7B-Instruct`](https://huggingface.co/tiiuae/falcon-7b-instruct) to generate questions and answers as references for testing set.
 3. Performed Prompt Engineering, Data Engineering and Analtics to generate more diverse set of questions, by engineering different parameters for generation of questions, including use of different search methods to find similar chunks (Sparse, Dense), use of different number of keywords as query for Sparse Search (1 keyword, 2 keywords, 3 keywords), use of different nuber of chunks (two chunks, three chunks) for generation of Complex Questions.
-4. Evaluated the created testing with 741 records using BLEU, ROUGE, BERTScore metrics, and performed investigation on achieved results.
-5. Added documentations for testing set generation and evaluations.
+4. Implemented error handling to further processing of the retrieved records for testing, such as converting incorrectly returned responses from the models to the correct format, dropping inaccuratte responses.
+5. Evaluated the created testing with 741 records using BLEU, ROUGE, BERTScore metrics using different subsets to get more insights while investigations, and performed investigation on achieved results.
+6. Added documentations for testing set generation and evaluations.
 
 ### Sushmitha Chandrakumar
 1. Spearheaded the creation of an interactive graphical user interface for the chatbot, leveraging the Svelte frontend framework to ensure a user-friendly and responsive design.[`App.svelte`](app/frontend/src/App.svelte) [`Chatbot.svelte`](app/frontend/src/Chatbot.svelte)
@@ -701,4 +579,4 @@ a functionality that is not explicitly provided by the [`LangChain`](https://www
 3. Built a Python script designed to craft complex questions that require multi-part reasoning. This script analyses semantics across multiple text snippets to formulate questions that test the chatbot's ability to generate accurate and contextually relevant answers.[`gen_complex.py`](data_preprocessing/qa_testing_data_generation/approach2/gen_complex.py)
 4. Question generated using GPT 3.5 model were then manually reviewed and annotated using [`Doccano`](https://github.com/doccano/doccano), an open-source text annotation tool. Doccano facilitated the sequence-to-sequence task annotations, ensuring the quality and relevance of the generated questions through human validation.
 5. Developed a Python script to systematically assess the effectiveness of the chatbot's answer generation. This script evaluates the chatbot's performance in providing coherent and contextually appropriate responses. [`evaluation_metrics.py`](data_preprocessing/qa_evaluation/approach2/evaluation_metrics.py)
-6. Conducted comprehensive system testing to validate the chatbot's performance across the entire pipeline. This testing ensured that the chatbot operates effectively from initial user input through to the final response generation, highlighting areas of strength and opportunities for improvement.
+6. Conducted comprehensive system testing using the [`Cucumber/BDD`](https://cucumber.io/) Framework to validate the chatbot's performance across the entire pipeline. This testing ensured that the chatbot operates effectively from initial user input through to the final response generation, highlighting areas of strength and opportunities for improvement.
