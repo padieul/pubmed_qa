@@ -20,6 +20,9 @@
   - [Test Dataset Generation Approach 2](#test-dataset-generation-approach-2)
   - [Contributions](#contributions)
     - [Abdulghani Almasri](#abdulghani-almasri)
+    - [Paul Dietze](#paul-dietze)
+    - [Mahammad Nahmadov](#mahammad-nahmadov)
+    - [Sushmitha Chandrakumar](#sushmitha-chandrakumar)
 
 ## Overview
 <div style="text-align:center"><img src="images/RAG.png" /></div>
@@ -616,3 +619,8 @@ to check the server setup status and display it in the UI.
 a functionality that is not explicitly provided by the [`LangChain`](https://www.langchain.com/) library.
 6. Adjusting and testing the (Svelte-based) frontend `Chatbot.svelte` to enable adding additional filters.
 7. Actively particapting in group debugging sessions. Assisting group members in configuring local projects for development.
+
+
+### Mahammad Nahmadov
+
+### Sushmitha Chandrakumar
